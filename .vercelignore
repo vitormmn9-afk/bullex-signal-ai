@@ -1,0 +1,9 @@
+node_modules
+.git
+src
+.env
+.env.local
+*.md
+scripts
+public
+supabase

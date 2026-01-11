@@ -12,9 +12,11 @@ import { SignalCard } from "@/components/SignalCard";
 import { StatsCard } from "@/components/StatsCard";
 import { MarketToggle } from "@/components/MarketToggle";
 import { GenerateButton } from "@/components/GenerateButton";
+import { AutoGenerateToggle } from "@/components/AutoGenerateToggle";
 import { PerformanceChart } from "@/components/PerformanceChart";
 import { useSignals } from "@/hooks/useSignals";
 import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const Index = () => {
@@ -25,8 +27,12 @@ const Index = () => {
     isLoading, 
     isGenerating, 
     generateSignal,
-    updateSignalResult 
-  } = useSignals(marketType);
+    updateSignalResult,
+    autoGenerateEnabled,
+    setAutoGenerateEnabled,
+    minProbability,
+    setMinProbability
+  } = useSignals(marketType, true);
 
   // Mock chart data - would come from real performance metrics
   const chartData = [
@@ -36,6 +42,8 @@ const Index = () => {
     { name: "Qui", wins: 15, losses: 2 },
     { name: "Sex", wins: 11, losses: 3 },
   ];
+
+  const displaySignals = signals.filter((s) => Number(s.probability) >= minProbability);
 
   return (
     <div className="min-h-screen bg-background">
@@ -99,13 +107,29 @@ const Index = () => {
         {/* Performance Chart */}
         <PerformanceChart data={chartData} />
 
+        {/* Confidence Threshold */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-muted-foreground">Confiança mínima</span>
+            <span className="text-sm font-medium">{minProbability}%</span>
+          </div>
+          <Slider value={[minProbability]} min={80} max={100} step={1} onValueChange={(v) => setMinProbability(v[0])} />
+        </div>
+
+        {/* Auto Generate Toggle */}
+        <AutoGenerateToggle 
+          enabled={autoGenerateEnabled} 
+          onToggle={setAutoGenerateEnabled}
+          disabled={isGenerating}
+        />
+
         {/* Generate Button */}
-        <GenerateButton onClick={generateSignal} isLoading={isGenerating} />
+        <GenerateButton onClick={generateSignal} isLoading={isGenerating} disabled={autoGenerateEnabled} />
 
         {/* Signals List */}
         <div className="space-y-3">
           <h2 className="text-sm font-medium text-muted-foreground">
-            Sinais Recentes - {marketType === "OTC" ? "OTC" : "Mercado Aberto"}
+            Sinais Recentes (≥ {minProbability}%) - {marketType === "OTC" ? "OTC" : "Mercado Aberto"}
           </h2>
 
           {isLoading ? (
@@ -114,15 +138,15 @@ const Index = () => {
                 <Skeleton key={i} className="h-48 w-full rounded-lg" />
               ))}
             </div>
-          ) : signals.length === 0 ? (
+          ) : displaySignals.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               <Activity className="w-12 h-12 mx-auto mb-4 opacity-50" />
-              <p>Nenhum sinal gerado ainda</p>
-              <p className="text-sm">Clique no botão acima para gerar seu primeiro sinal</p>
+              <p>Nenhum sinal ≥ {minProbability}% encontrado</p>
+              <p className="text-sm">Ative a geração automática ou tente novamente em alguns segundos</p>
             </div>
           ) : (
             <div className="space-y-3">
-              {signals.map((signal, idx) => (
+              {displaySignals.map((signal, idx) => (
                 <div key={signal.id} className="animate-fade-in">
                   <SignalCard
                     asset={signal.asset}

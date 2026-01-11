@@ -1,73 +1,58 @@
-# Welcome to your Lovable project
+# Bullex AI Signals
 
-## Project info
+Aplicação de sinais com IA para velas de 1 minuto, com filtro de confiança mínima, aprendizado contínuo e suporte a Mercado Aberto e OTC.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## Tecnologias
+- Vite + React + TypeScript
+- Tailwind + shadcn-ui
+- Supabase (cliente)
 
-## How can I edit this code?
+## Rodando localmente
 
-There are several ways of editing your application.
-
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+```bash
+npm install
 npm run dev
+# abra http://localhost:8080
 ```
 
-**Edit a file directly in GitHub**
+Crie `.env` com:
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```env
+VITE_SUPABASE_URL="https://<seu-projeto>.supabase.co"
+VITE_SUPABASE_ANON_KEY="<sua-chave-anon>"
+```
 
-**Use GitHub Codespaces**
+## Build de produção
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+```bash
+npm run build
+npm run preview
+# abra a URL mostrada
+```
 
-## What technologies are used for this project?
+## Deploy na Vercel
 
-This project is built with:
+1. Login e link do projeto:
+```bash
+vercel login
+vercel link --yes
+```
+2. Variáveis de ambiente (em Project Settings ou CLI):
+	- `VITE_SUPABASE_URL`
+	- `VITE_SUPABASE_ANON_KEY`
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+3. Deploy:
+```bash
+vercel deploy --prod --yes
+```
 
-## How can I deploy this project?
+O arquivo `vercel.json` já está configurado com `buildCommand` e `outputDirectory`.
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+## Funcionalidades
+- Filtro de confiança mínima ajustável (80–100%), aplicado em geração, lista e estatísticas
+- Geração automática que reintenta quando não há oportunidade ≥ confiança mínima
+- Aprendizado e evolução da IA (histórico em localStorage)
+- Notificação de entrada 1 minuto antes e saída ao fim da vela
 
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+## Aviso
+Trading envolve riscos. Use com responsabilidade.

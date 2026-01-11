@@ -1,4 +1,5 @@
-import { ArrowUp, ArrowDown, Clock, TrendingUp, Zap } from "lucide-react";
+import { useState, useEffect } from "react";
+import { ArrowUp, ArrowDown, Clock, TrendingUp, Zap, AlertCircle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -26,6 +27,30 @@ export function SignalCard({
   createdAt,
   isLatest,
 }: SignalCardProps) {
+  const [timeRemaining, setTimeRemaining] = useState<number>(expirationTime);
+  const [isExpiring, setIsExpiring] = useState(false);
+
+  useEffect(() => {
+    const createdTime = new Date(createdAt).getTime();
+
+    const interval = setInterval(() => {
+      const now = Date.now();
+      const elapsed = now - createdTime;
+      const remaining = Math.max(0, expirationTime - Math.floor(elapsed / 1000));
+
+      setTimeRemaining(remaining);
+
+      // Alert when 1 minute or less remains
+      if (remaining <= 60 && remaining > 0) {
+        setIsExpiring(true);
+      } else {
+        setIsExpiring(false);
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [createdAt, expirationTime]);
+
   const isCall = direction === "CALL";
   const isWin = result === "WIN";
   const isLoss = result === "LOSS";
@@ -36,6 +61,12 @@ export function SignalCard({
     minute: "2-digit",
   });
 
+  const formatTime = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${minutes}:${secs.toString().padStart(2, "0")}`;
+  };
+
   return (
     <Card
       className={cn(
@@ -43,7 +74,8 @@ export function SignalCard({
         "bg-gradient-card border-border/50",
         isLatest && "animate-signal glow",
         isWin && "border-success/50",
-        isLoss && "border-destructive/50"
+        isLoss && "border-destructive/50",
+        isExpiring && !result && "border-warning/50 animate-pulse shadow-lg shadow-warning/50"
       )}
     >
       {/* Glow effect for latest signal */}
@@ -56,10 +88,21 @@ export function SignalCard({
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <span className="text-lg font-bold text-foreground">{asset}</span>
+            {probability >= 90 && (
+              <Badge variant="outline" className="text-success border-success">
+                ≥90% Alta Confiança
+              </Badge>
+            )}
             {isLatest && (
               <Badge variant="outline" className="text-primary border-primary animate-pulse">
                 <Zap className="w-3 h-3 mr-1" />
                 NOVO
+              </Badge>
+            )}
+            {isExpiring && !result && (
+              <Badge variant="outline" className="text-warning border-warning animate-pulse">
+                <AlertCircle className="w-3 h-3 mr-1" />
+                ENTRANDO
               </Badge>
             )}
           </div>
@@ -93,10 +136,15 @@ export function SignalCard({
           </div>
         </div>
 
-        {/* Expiration */}
-        <div className="flex items-center gap-2 mb-3 text-sm text-muted-foreground">
-          <Clock className="w-4 h-4" />
-          <span>Expiração: {expirationTime} minutos</span>
+        {/* Time Remaining */}
+        <div className={cn(
+          "flex items-center justify-between mb-3 p-2 rounded-lg text-sm font-semibold",
+          isExpiring && !result
+            ? "bg-warning/20 text-warning"
+            : "bg-secondary/50 text-muted-foreground"
+        )}>
+          <span>Tempo restante:</span>
+          <span className="text-lg font-bold">{formatTime(timeRemaining)}</span>
         </div>
 
         {/* Indicators */}

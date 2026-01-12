@@ -28,6 +28,7 @@ import AIControlDashboard from "@/components/AIControlDashboard";
 import { aiSignalAnalyzer } from "@/lib/aiSignalAnalyzer";
 import AutoAnalysisTestNew from "@/components/AutoAnalysisTestNew";
 import { ContinuousLearningPanel } from "@/components/ContinuousLearningPanel";
+import { AutomaticLearningTest } from "@/components/AutomaticLearningTest";
 
 const Index = () => {
   const [marketType, setMarketType] = useState<"OTC" | "OPEN">("OPEN");
@@ -271,11 +272,16 @@ const Index = () => {
         {/* Continuous Learning Panel */}
         <ContinuousLearningPanel />
 
+        {/* Automatic Learning Test */}
+        <AutomaticLearningTest />
+
                   </>
         ) : activeTab === "evolution" ? (
           <AIEvolutionPanel />
         ) : activeTab === "learning" ? (
-          <AILearningLogPanel />
+          <>
+            <AILearningLogPanel />
+          </>
         ) : (
           <KnowledgePanel />
         )}

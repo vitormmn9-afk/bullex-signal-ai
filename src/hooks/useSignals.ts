@@ -370,15 +370,50 @@ export function useSignals(marketType: "OTC" | "OPEN", autoGenerate: boolean = t
         bestIndicators
       );
 
-      // Garantir probabilidade mínima razoável (85% ~ 95%)
-      if (adaptiveProbability < 85) {
-        adaptiveProbability = 85 + Math.floor(Math.random() * 11); // 85-95%
-      }
-      if (adaptiveProbability > 98) {
-        adaptiveProbability = 98; // Cap máximo
+      // ✅ APLICAR PENALIZAÇÕES/BÔNUS BASEADOS NO APRENDIZADO
+      const operationalConfig = aiLearningSystem.getOperationalConfig();
+      const patternRates = aiLearningSystem.getLearningState().patternSuccessRates;
+      
+      // Se o padrão tem histórico, ajustar probabilidade
+      if (patternRates[candlePatternName]) {
+        const patternSuccessRate = patternRates[candlePatternName];
+        if (patternSuccessRate < 40) {
+          adaptiveProbability -= 15; // Penalizar padrões fracos
+          console.log(`⚠️ Padrão ${candlePatternName} historicamente fraco (${patternSuccessRate.toFixed(1)}%) - Reduzindo probabilidade`);
+        } else if (patternSuccessRate > 70) {
+          adaptiveProbability += 10; // Bonificar padrões fortes
+          console.log(`✅ Padrão ${candlePatternName} historicamente forte (${patternSuccessRate.toFixed(1)}%) - Aumentando probabilidade`);
+        }
       }
 
-      console.log('🎲 Probabilidade calculada:', adaptiveProbability.toFixed(1) + '%', '| Filtro mínimo:', minProbability + '%');
+      // Verificar requisitos mínimos aprendidos
+      if (analysis.trendStrength < operationalConfig.minTrendStrength) {
+        adaptiveProbability -= 10;
+        console.log(`⚠️ Trend Strength ${analysis.trendStrength.toFixed(1)} abaixo do mínimo ${operationalConfig.minTrendStrength} - Penalizado`);
+      }
+      
+      if (analysis.supportResistance < operationalConfig.minSupportResistance) {
+        adaptiveProbability -= 10;
+        console.log(`⚠️ S/R ${analysis.supportResistance.toFixed(1)} abaixo do mínimo ${operationalConfig.minSupportResistance} - Penalizado`);
+      }
+
+      // Aplicar taxa de acerto histórica
+      const winRate = learningState.winRate;
+      if (winRate > 0) {
+        if (winRate < 50) {
+          adaptiveProbability -= 15; // Se está perdendo muito, ser mais conservador
+          console.log(`📉 Win Rate baixo (${winRate.toFixed(1)}%) - Sendo mais conservador`);
+        } else if (winRate > 70) {
+          adaptiveProbability += 5; // Se está acertando muito, pode ser mais agressivo
+          console.log(`📈 Win Rate alto (${winRate.toFixed(1)}%) - Confiança aumentada`);
+        }
+      }
+
+      // REMOVER LIMITE MÍNIMO FIXO - Deixar a IA decidir
+      // Apenas garantir que não fique negativo ou acima de 100
+      adaptiveProbability = Math.min(98, Math.max(50, Math.round(adaptiveProbability)));
+
+      console.log('🎲 Probabilidade final após aprendizado:', adaptiveProbability.toFixed(1) + '%', '| Filtro mínimo:', minProbability + '%');
 
       // Check contra filtro do usuário
       if (adaptiveProbability < minProbability) {

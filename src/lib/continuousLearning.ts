@@ -224,8 +224,16 @@ class ContinuousLearningSystem {
     const config = aiLearningSystem.getOperationalConfig();
     let adjusted = false;
 
-    // Se taxa de acerto está muito baixa, aumentar requisitos
-    if (winRate < 50) {
+    // 🔥 AJUSTE AGRESSIVO SE ESTÁ PERDENDO MUITO
+    if (winRate < 40) {
+      config.minTrendStrength = Math.min(config.minTrendStrength + 10, 80);
+      config.minSupportResistance = Math.min(config.minSupportResistance + 10, 85);
+      config.requireConfirmations = Math.min(config.requireConfirmations + 1, 3);
+      adjusted = true;
+      console.log('🔴 ALERTA: Win Rate MUITO baixo:', winRate.toFixed(1) + '% - Aumentando thresholds AGRESSIVAMENTE');
+    }
+    // Se taxa de acerto está baixa, aumentar requisitos
+    else if (winRate < 50) {
       config.minTrendStrength = Math.min(config.minTrendStrength + 5, 70);
       config.minSupportResistance = Math.min(config.minSupportResistance + 5, 80);
       config.requireConfirmations = Math.min(config.requireConfirmations + 1, 3);
@@ -242,7 +250,11 @@ class ContinuousLearningSystem {
 
     if (adjusted) {
       aiLearningSystem.updateOperationalConfig(config);
-      console.log('🔧 Thresholds ajustados:', config);
+      console.log('🔧 Thresholds ajustados:', {
+        minTrendStrength: config.minTrendStrength,
+        minSupportResistance: config.minSupportResistance,
+        requireConfirmations: config.requireConfirmations,
+      });
     }
   }
 

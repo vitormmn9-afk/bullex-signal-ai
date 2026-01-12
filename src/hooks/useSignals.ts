@@ -118,6 +118,95 @@ export function useSignals(marketType: "OTC" | "OPEN", autoGenerate: boolean = t
     console.log('🤖 Auto-geração:', autoGenerateEnabled ? 'ATIVA' : 'INATIVA', '| Intervalo:', autoRefreshInterval + 's');
   }, [autoGenerateEnabled, autoRefreshInterval]);
 
+  const autoRefreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const generateSignalRef = useRef<(() => Promise<Signal | null>) | null>(null);
+
+  // ✅ FUNÇÃO DE APRENDIZADO AUTOMÁTICO
+  const recordAutomaticLearning = useCallback((result: 'WIN' | 'LOSS', analysis: any) => {
+    try {
+      const signal = signals.find(s => s.id === analysis.signalId);
+      if (!signal) {
+        console.warn('⚠️ Sinal não encontrado para aprendizado:', analysis.signalId);
+        return;
+      }
+
+      const signalHistory = {
+        id: signal.id,
+        asset: signal.asset,
+        direction: signal.direction,
+        probability: signal.probability,
+        analysisMetrics: signal.analysisMetrics || {
+          rsi: 50 + Math.random() * 100,
+          macd: Math.random() - 0.5,
+          bbands: 50 + Math.random() * 100,
+          candlePattern: signal.candlePattern || 'neutral',
+          quadrantScore: 50 + Math.random() * 50,
+          priceAction: 50 + Math.random() * 50,
+          volumeProfile: 50 + Math.random() * 50,
+          trendStrength: 40 + Math.random() * 60,
+          supportResistance: 50 + Math.random() * 50,
+          overallScore: 50 + Math.random() * 50,
+        },
+        result: result as 'WIN' | 'LOSS',
+        timestamp: Date.now(),
+      };
+
+      aiLearningSystem.recordSignal(signalHistory);
+      console.log(`📚 [AI LEARNING] ${result} registrado - ${signal.asset} ${signal.direction}`);
+
+      const indicators = (signal.indicators_used || []).filter(Boolean) as string[];
+      aiEvolutionTracker.addOperationLearning({
+        signalId: signal.id,
+        asset: signal.asset,
+        direction: signal.direction,
+        result,
+        indicators,
+        candlePattern: signal.candlePattern,
+        learned: `IA aprendeu com ${result}: ${signal.asset} ${signal.direction} | Probabilidade: ${signal.probability}%`,
+        implemented: [`Resultado registrado automaticamente: ${result}`],
+      });
+      console.log(`📝 [EVOLUTION] ${result} registrado no tracker`);
+
+      const learningState = aiLearningSystem.getLearningState();
+      const history = aiLearningSystem.getHistory();
+      const wins = history.filter(h => h.result === 'WIN').length;
+      const completed = history.filter(h => h.result === 'WIN' || h.result === 'LOSS').length;
+      const accuracy = completed > 0 ? (wins / completed) * 100 : 0;
+
+      aiEvolutionTracker.recordMetric({
+        winRate: learningState.winRate,
+        totalSignals: learningState.totalSignals,
+        phase: `${learningState.evolutionPhase}`,
+        topIndicators: learningState.bestIndicators,
+        accuracy,
+      });
+
+      console.log(`📊 [MÉTRICA ATUALIZADA]`);
+      console.log(`   • Taxa de Acerto: ${accuracy.toFixed(1)}%`);
+      console.log(`   • Total: ${completed} | Vitórias: ${wins}`);
+      console.log(`   • Fase: ${learningState.evolutionPhase}`);
+      console.log(`   • Melhores Indicadores: ${learningState.bestIndicators.join(', ') || 'N/A'}`);
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('operation-learned', {
+          detail: {
+            result,
+            asset: signal.asset,
+            direction: signal.direction,
+            accuracy,
+            timestamp: Date.now(),
+          }
+        }));
+      }
+
+      console.log(`✅ [APRENDIZADO COMPLETO] ${result} - ${signal.asset}`);
+      console.log('═'.repeat(60));
+    } catch (error) {
+      console.error('❌ [ERRO] Falha ao registrar aprendizado automático:', error);
+    }
+  }, [signals]);
+
   // ✅ LISTENER PARA AUTO-ANÁLISE DE WIN/LOSS
   useEffect(() => {
     const handleWin = (event: any) => {
@@ -191,96 +280,6 @@ export function useSignals(marketType: "OTC" | "OPEN", autoGenerate: boolean = t
       window.removeEventListener('ai-learning-updated', handleLearningUpdate);
     };
   }, [toast, recordAutomaticLearning]);
-
-  // ✅ FUNÇÃO DE APRENDIZADO AUTOMÁTICO
-  const recordAutomaticLearning = useCallback((result: 'WIN' | 'LOSS', analysis: any) => {
-    try {
-      const signal = signals.find(s => s.id === analysis.signalId);
-      if (!signal) {
-        console.warn('⚠️ Sinal não encontrado para aprendizado:', analysis.signalId);
-        return;
-      }
-
-      // Criar dados de aprendizado completos
-      const signalHistory = {
-        id: signal.id,
-        asset: signal.asset,
-        direction: signal.direction,
-        probability: signal.probability,
-        analysisMetrics: signal.analysisMetrics || {
-          rsi: 50 + Math.random() * 100,
-          macd: Math.random() - 0.5,
-          bbands: 50 + Math.random() * 100,
-          candlePattern: signal.candlePattern || 'neutral',
-          quadrantScore: 50 + Math.random() * 50,
-          priceAction: 50 + Math.random() * 50,
-          volumeProfile: 50 + Math.random() * 50,
-          trendStrength: 40 + Math.random() * 60,
-          supportResistance: 50 + Math.random() * 50,
-          overallScore: 50 + Math.random() * 50,
-        },
-        result: result as 'WIN' | 'LOSS',
-        timestamp: Date.now(),
-      };
-
-      // 1️⃣ Registrar no AI Learning System
-      aiLearningSystem.recordSignal(signalHistory);
-      console.log(`📚 [AI LEARNING] ${result} registrado - ${signal.asset} ${signal.direction}`);
-
-      // 2️⃣ Registrar no Evolution Tracker
-      const indicators = (signal.indicators_used || []).filter(Boolean) as string[];
-      aiEvolutionTracker.addOperationLearning({
-        signalId: signal.id,
-        asset: signal.asset,
-        direction: signal.direction,
-        result,
-        indicators,
-        candlePattern: signal.candlePattern,
-        learned: `IA aprendeu com ${result}: ${signal.asset} ${signal.direction} | Probabilidade: ${signal.probability}%`,
-        implemented: [`Resultado registrado automaticamente: ${result}`],
-      });
-      console.log(`📝 [EVOLUTION] ${result} registrado no tracker`);
-
-      // 3️⃣ Registrar métrica de evolução
-      const learningState = aiLearningSystem.getLearningState();
-      const history = aiLearningSystem.getHistory();
-      const wins = history.filter(h => h.result === 'WIN').length;
-      const completed = history.filter(h => h.result === 'WIN' || h.result === 'LOSS').length;
-      const accuracy = completed > 0 ? (wins / completed) * 100 : 0;
-
-      aiEvolutionTracker.recordMetric({
-        winRate: learningState.winRate,
-        totalSignals: learningState.totalSignals,
-        phase: `${learningState.evolutionPhase}`,
-        topIndicators: learningState.bestIndicators,
-        accuracy,
-      });
-
-      console.log(`📊 [MÉTRICA ATUALIZADA]`);
-      console.log(`   • Taxa de Acerto: ${accuracy.toFixed(1)}%`);
-      console.log(`   • Total: ${completed} | Vitórias: ${wins}`);
-      console.log(`   • Fase: ${learningState.evolutionPhase}`);
-      console.log(`   • Melhores Indicadores: ${learningState.bestIndicators.join(', ') || 'N/A'}`);
-
-      // 4️⃣ Disparar evento de aprendizado atualizado
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('operation-learned', {
-          detail: {
-            result,
-            asset: signal.asset,
-            direction: signal.direction,
-            accuracy,
-            timestamp: Date.now(),
-          }
-        }));
-      }
-
-      console.log(`✅ [APRENDIZADO COMPLETO] ${result} - ${signal.asset}`);
-      console.log('═'.repeat(60));
-    } catch (error) {
-      console.error('❌ [ERRO] Falha ao registrar aprendizado automático:', error);
-    }
-  }, [signals]);
 
   const fetchSignals = useCallback(async () => {
     setIsLoading(true);

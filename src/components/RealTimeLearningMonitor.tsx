@@ -34,11 +34,11 @@ export function RealTimeLearningMonitor() {
       };
 
       setLogs(prev => [newLog, ...prev].slice(0, 20)); // Manter últimos 20
-      setStats({
-        totalLearned: prev => prev.totalLearned + 1,
+      setStats(prev => ({
+        totalLearned: prev.totalLearned + 1,
         lastLearning: new Date(),
-        learningRate: 0, // Será calculado dinamicamente
-      });
+        learningRate: 0,
+      }));
     };
 
     window.addEventListener('operation-learned', handleOperationLearned);

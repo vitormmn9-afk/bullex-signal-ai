@@ -1,0 +1,184 @@
+{
+  "marketKnowledge": {
+    "currencyPairs": {
+      "EUR/USD": {
+        "name": "Euro / Dólar Americano",
+        "characteristics": "Par mais líquido do mundo, volatilidade moderada",
+        "bestTradingHours": "08:00-17:00 UTC",
+        "seasonalPatterns": ["Verão europeu = maior volatilidade", "Anúncios do BCE impactam"],
+        "supportLevels": [1.0500, 1.0400, 1.0300],
+        "resistanceLevels": [1.1000, 1.1100, 1.1200],
+        "averageSpread": "1-2 pips"
+      },
+      "GBP/USD": {
+        "name": "Libra / Dólar Americano",
+        "characteristics": "Alta volatilidade, spreads mais amplos",
+        "bestTradingHours": "08:00-17:00 UTC",
+        "seasonalPatterns": ["Dados de emprego UK = impacto forte"],
+        "supportLevels": [1.2500, 1.2400, 1.2300],
+        "resistanceLevels": [1.3000, 1.3100, 1.3200],
+        "averageSpread": "2-3 pips"
+      },
+      "USD/JPY": {
+        "name": "Dólar / Iene Japonês",
+        "characteristics": "Correlação inversa com risco, carry trade",
+        "bestTradingHours": "17:00-08:00 UTC",
+        "seasonalPatterns": ["Bônus anuais em julho/dezembro", "Dados de inflação impactam"],
+        "supportLevels": [138.00, 137.00, 136.00],
+        "resistanceLevels": [150.00, 151.00, 152.00],
+        "averageSpread": "1-2 pips"
+      }
+    },
+    "patternLibrary": {
+      "doubleTop": {
+        "description": "Dois picos no mesmo nível, reversão de alta para baixa",
+        "reliability": 0.78,
+        "timeframe": "4h-1d",
+        "targetDistance": "100% da altura do padrão",
+        "riskReward": "1:1 a 1:3"
+      },
+      "doubleBottom": {
+        "description": "Dois fundos no mesmo nível, reversão de baixa para alta",
+        "reliability": 0.78,
+        "timeframe": "4h-1d",
+        "targetDistance": "100% da altura do padrão",
+        "riskReward": "1:1 a 1:3"
+      },
+      "headAndShoulders": {
+        "description": "Ombro esquerdo-cabeça-ombro direito, reversão de alta",
+        "reliability": 0.82,
+        "timeframe": "1h-1d",
+        "targetDistance": "altura da cabeça",
+        "riskReward": "1:2 a 1:4"
+      },
+      "triangleAscending": {
+        "description": "Suporte crescente, resistência plana, rompimento para cima",
+        "reliability": 0.75,
+        "timeframe": "4h-1d",
+        "targetDistance": "altura do triângulo",
+        "riskReward": "1:1 a 1:2"
+      },
+      "wedgeDescending": {
+        "description": "Ambas as linhas descendo, rompimento para cima esperado",
+        "reliability": 0.72,
+        "timeframe": "1h-4h",
+        "targetDistance": "altura da cunha",
+        "riskReward": "1:1 a 1:2"
+      }
+    },
+    "indicatorSettings": {
+      "RSI": {
+        "period": 14,
+        "overbought": 70,
+        "oversold": 30,
+        "divergence": "Quando preço faz novo máximo mas RSI não = reversão",
+        "bestCombination": ["MACD", "Bollinger Bands"]
+      },
+      "MACD": {
+        "fastLine": 12,
+        "slowLine": 26,
+        "signal": 9,
+        "bullish": "Linha rápida cruza acima da lenta",
+        "bearish": "Linha rápida cruza abaixo da lenta",
+        "divergence": "Preço novo máximo mas MACD menor = fraqueza"
+      },
+      "BollingerBands": {
+        "period": 20,
+        "standardDeviations": 2,
+        "overbought": "Preço toca banda superior",
+        "oversold": "Preço toca banda inferior",
+        "squeeze": "Bandas muito próximas = volatilidade baixa = rompimento próximo"
+      }
+    },
+    "riskManagement": {
+      "positionSizing": {
+        "maxRiskPerTrade": "2% do capital",
+        "riskRewardMinimum": "1:2",
+        "lotSize": "Baseado em (Capital × Risco%) / distância do stop"
+      },
+      "stopLoss": {
+        "placement": "2-3% além do ponto de entrada ou nível técnico",
+        "trailing": "Use quando lucrativo para proteger ganhos",
+        "timeBasedStop": "Feche se > X velas sem movimento"
+      },
+      "takeProfits": {
+        "firstTarget": "50% do movimento esperado",
+        "secondTarget": "75% do movimento esperado",
+        "finalTarget": "100% do movimento esperado ou mais"
+      }
+    },
+    "sessionStrengths": {
+      "london": {
+        "time": "08:00-17:00 UTC",
+        "characteristics": "Volatilidade média-alta, maior volume",
+        "bestPairs": ["EUR/USD", "GBP/USD", "EUR/GBP"]
+      },
+      "newyork": {
+        "time": "13:00-22:00 UTC",
+        "characteristics": "Volatilidade alta, muitos noticiários",
+        "bestPairs": ["EUR/USD", "USD/JPY", "GBP/USD"]
+      },
+      "tokyo": {
+        "time": "00:00-09:00 UTC",
+        "characteristics": "Volatilidade baixa, movimentos pequenos",
+        "bestPairs": ["USD/JPY", "AUD/USD", "NZD/USD"]
+      },
+      "overlap": {
+        "time": "13:00-17:00 UTC (Londres-Nova York)",
+        "characteristics": "Máxima volatilidade, melhores oportunidades",
+        "bestPairs": "Todos os pares principais"
+      }
+    },
+    "economicEvents": {
+      "high_impact": [
+        "Anúncio de taxa de juros",
+        "Decisão de política monetária",
+        "PIB",
+        "Dados de emprego",
+        "Inflação CPI/PPI"
+      ],
+      "medium_impact": [
+        "Vendas varejistas",
+        "Construção residencial",
+        "Sentimento de confiança do consumidor",
+        "Produção industrial"
+      ],
+      "trading_tip": "Evite traduzir 30 minutos antes/depois de eventos de alto impacto se iniciante"
+    },
+    "martketPsychology": {
+      "supportResistance": "Níveis onde muitos traders colocam ordem, cria zona de conflito",
+      "roundNumbers": "1.0000, 1.1000, 100.00 - psicologia do trader",
+      "fibonacciLevels": "Retração de 61.8%, extensão de 161.8% - pontos de interesse",
+      "volumeProfile": "Maior volume de negócios = maior importância da zona",
+      "sentimentShifts": "Volume expandindo em direção da tendência = força"
+    }
+  },
+  "successMetrics": {
+    "winRate": {
+      "beginners": "45-50%",
+      "intermediate": "55-65%",
+      "advanced": "65-75%",
+      "professional": "70-80%"
+    },
+    "riskRewardRatio": {
+      "minimum": "1:1",
+      "recommended": "1:2",
+      "optimal": "1:3 ou melhor"
+    },
+    "profitability": {
+      "monthlyTarget": "2-5% do capital",
+      "yearlyTarget": "30-100% do capital",
+      "note": "Consistência > lucro rápido"
+    }
+  },
+  "commonMistakes": [
+    "Trocar muito frequentemente - reduz taxa de ganho",
+    "Não usar stop loss - risco ilimitado",
+    "Adicionar à posição perdedora - piora o problema",
+    "Ignorar gerenciamento de risco - ruína garantida",
+    "Emocionar-se com ganhos/perdas - decisões ruins",
+    "Não acompanhar as operações - aprende menos",
+    "Trocar contra a tendência principal - perda de energia",
+    "Pegar números redondos sem confirmação técnica - falsa saída comum"
+  ]
+}

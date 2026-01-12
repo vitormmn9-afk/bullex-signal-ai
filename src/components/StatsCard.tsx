@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { LucideIcon } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -10,7 +11,7 @@ interface StatsCardProps {
   variant?: "default" | "success" | "danger" | "accent";
 }
 
-export function StatsCard({
+export const StatsCard = memo(function StatsCard({
   title,
   value,
   subtitle,
@@ -21,7 +22,7 @@ export function StatsCard({
     <Card
       className={cn(
         "relative overflow-hidden p-4 bg-gradient-card border-border/50",
-        "transition-all duration-300 hover:border-primary/30"
+        "hover:border-primary/50 hover:shadow-lg hover:scale-[1.02] transition-all duration-300"
       )}
     >
       <div className="flex items-start justify-between">
@@ -56,4 +57,4 @@ export function StatsCard({
       </div>
     </Card>
   );
-}
+});

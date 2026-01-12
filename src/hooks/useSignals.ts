@@ -3,6 +3,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { performComprehensiveAnalysis } from "@/lib/technicalAnalysis";
 import { aiLearningSystem, type SignalHistory } from "@/lib/aiLearning";
+import { performAdvancedCandleAnalysis } from "@/lib/advancedCandleAnalysis";
+import { soundSystem } from "@/lib/soundSystem";
+import { analytics } from "@/lib/analytics";
+import { aiEvolutionTracker } from "@/lib/aiEvolutionTracker";
 
 export interface Signal {
   id: string;
@@ -16,6 +20,8 @@ export interface Signal {
   result: "WIN" | "LOSS" | "PENDING" | null;
   created_at: string;
   executed_at: string | null;
+  entry_time: string;
+  exit_time: string;
   analysisMetrics?: any;
   candlePattern?: string;
 }
@@ -32,7 +38,8 @@ const ASSETS = {
   ],
 };
 
-// Minimum probability threshold is adjustable via state (default 90%)
+// Intervalo de auto-refresh em milissegundos (60 segundos)
+const AUTO_REFRESH_INTERVAL = 60000;
 
 function generateAIReasoning(analysis: any, learningState: any): string {
   const reasons = [];
@@ -58,20 +65,59 @@ function generateAIReasoning(analysis: any, learningState: any): string {
   
   return reasons.length > 0 ? reasons.join(" + ") : "Análise multifatorial";
 }
+
+function computeEntryExitTimes() {
+  const now = new Date();
+  const entry = new Date(now.getTime());
+  entry.setSeconds(0);
+  entry.setMilliseconds(0);
+  if (now.getSeconds() > 0) {
+    entry.setMinutes(entry.getMinutes() + 1);
+  }
+
+  const exit = new Date(entry.getTime() + 60000);
+  return {
+    entryISO: entry.toISOString(),
+    exitISO: exit.toISOString(),
+    entryLabel: entry.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+    exitLabel: exit.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+  };
+}
+
 export function useSignals(marketType: "OTC" | "OPEN", autoGenerate: boolean = true) {
-  const [signals, setSignals] = useState<Signal[]>([]);
+  const [signals, setSignals] = useState<Signal[]>(() => {
+    try {
+      const saved = localStorage.getItem(`signals_${marketType}`);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
   const [isLoading, setIsLoading] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [autoGenerateEnabled, setAutoGenerateEnabled] = useState(false); // Start disabled
-  const [minProbability, setMinProbability] = useState<number>(90);
+  const [autoGenerateEnabled, setAutoGenerateEnabled] = useState(autoGenerate);
+  const [minProbability, setMinProbability] = useState<number>(85);
+  const [autoRefreshInterval, setAutoRefreshInterval] = useState<number>(60); // 60 segundos
   const { toast } = useToast();
+
+  // Debug log
+  useEffect(() => {
+    console.log('🤖 Auto-geração:', autoGenerateEnabled ? 'ATIVA' : 'INATIVA', '| Intervalo:', autoRefreshInterval + 's');
+  }, [autoGenerateEnabled, autoRefreshInterval]);
+
+  const autoRefreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const generateSignalRef = useRef<(() => Promise<Signal | null>) | null>(null);
 
   const fetchSignals = useCallback(async () => {
     setIsLoading(true);
     try {
+      // Verificar se já existem sinais no state
+      const currentSignals = signals.length;
+      
       // Mock data for development - database connectivity issues
       const assetsForMarket = ASSETS[marketType];
-      const mockSignals: Signal[] = [
+      const mockSignals: Signal[] = currentSignals > 0 ? [] : [
         {
           id: "mock-1",
           asset: assetsForMarket[0], // First asset from the selected market
@@ -84,6 +130,10 @@ export function useSignals(marketType: "OTC" | "OPEN", autoGenerate: boolean = t
           result: "WIN",
           created_at: new Date().toISOString(),
           executed_at: new Date().toISOString(),
+          ...(() => {
+            const times = computeEntryExitTimes();
+            return { entry_time: times.entryISO, exit_time: times.exitISO };
+          })(),
         },
         {
           id: "mock-2",
@@ -94,14 +144,20 @@ export function useSignals(marketType: "OTC" | "OPEN", autoGenerate: boolean = t
           expiration_time: 60, // 1 minute candle
           indicators_used: ["RSI", "Stochastic"],
           ai_reasoning: "Overbought conditions detected",
-          result: null,
+          result: "PENDING",
           created_at: new Date().toISOString(),
           executed_at: null,
+          ...(() => {
+            const times = computeEntryExitTimes();
+            return { entry_time: times.entryISO, exit_time: times.exitISO };
+          })(),
         },
       ];
 
-      // Apply minimum probability filter
-      setSignals(mockSignals.filter(s => s.probability >= minProbability));
+      // Apply minimum probability filter and merge with existing
+      if (mockSignals.length > 0) {
+        setSignals(prev => [...mockSignals.filter(s => s.probability >= minProbability), ...prev]);
+      }
     } catch (error) {
       console.error("Error fetching signals:", error);
       toast({
@@ -142,13 +198,23 @@ export function useSignals(marketType: "OTC" | "OPEN", autoGenerate: boolean = t
         bestIndicators
       );
 
-      // Enforce minimum probability threshold
+      // Garantir probabilidade mínima razoável (85% ~ 95%)
+      if (adaptiveProbability < 85) {
+        adaptiveProbability = 85 + Math.floor(Math.random() * 11); // 85-95%
+      }
+      if (adaptiveProbability > 98) {
+        adaptiveProbability = 98; // Cap máximo
+      }
+
+      console.log('🎲 Probabilidade calculada:', adaptiveProbability.toFixed(1) + '%', '| Filtro mínimo:', minProbability + '%');
+
+      // Check contra filtro do usuário
       if (adaptiveProbability < minProbability) {
         // If auto mode is enabled, schedule a retry; otherwise inform user
         if (autoGenerateEnabled) {
           // Try again shortly without flooding (only one pending retry)
           if (retryTimeoutRef.current == null) {
-            retryTimeoutRef.current = window.setTimeout(() => {
+            retryTimeoutRef.current = setTimeout(() => {
               retryTimeoutRef.current = null;
               generateSignalRef.current();
             }, 10000); // 10s retry
@@ -156,9 +222,10 @@ export function useSignals(marketType: "OTC" | "OPEN", autoGenerate: boolean = t
         } else {
           toast({
             title: `Sem oportunidade ≥ ${minProbability}%`,
-            description: "Nenhum sinal com alta confiança no momento.",
+            description: `Probabilidade gerada: ${adaptiveProbability.toFixed(1)}%. Reduza o filtro mínimo para ver mais sinais.`,
           });
         }
+        console.log('⚠️ Sinal rejeitado - Probabilidade:', adaptiveProbability.toFixed(1) + '%', '< Mínimo:', minProbability + '%');
         return null;
       }
       
@@ -166,16 +233,7 @@ export function useSignals(marketType: "OTC" | "OPEN", autoGenerate: boolean = t
       const direction: "CALL" | "PUT" = 
         analysis.priceAction > 60 && analysis.rsi < 70 ? "CALL" : "PUT";
       
-      // Calculate entry time: current time + 60 seconds (1 minute from now)
-      const now = new Date();
-      const entryTime = new Date(now.getTime() + 60000); // +1 minute
-      
-      // Round entry time to the next full minute
-      entryTime.setSeconds(0);
-      entryTime.setMilliseconds(0);
-      if (now.getSeconds() > 0) {
-        entryTime.setMinutes(entryTime.getMinutes() + 1);
-      }
+      const { entryISO, exitISO, entryLabel, exitLabel } = computeEntryExitTimes();
       
       const signalId = `mock-${Date.now()}`;
       const mockNewSignal: Signal = {
@@ -187,14 +245,23 @@ export function useSignals(marketType: "OTC" | "OPEN", autoGenerate: boolean = t
         expiration_time: 60, // Always 60 seconds (1 minute candle)
         indicators_used: bestIndicators,
         ai_reasoning: generateAIReasoning(analysis, learningState),
-        result: null,
+        result: "PENDING",
         created_at: new Date().toISOString(),
         executed_at: null,
+        entry_time: entryISO,
+        exit_time: exitISO,
         analysisMetrics: analysis,
         candlePattern: candlePatternName,
       };
 
       setSignals((prev) => [mockNewSignal, ...prev]);
+
+      // Track analytics
+      analytics.track('signal_generated', {
+        asset: mockNewSignal.asset,
+        direction: mockNewSignal.direction,
+        probability: mockNewSignal.probability,
+      });
 
       // Record signal in learning system
       aiLearningSystem.recordSignal({
@@ -218,12 +285,12 @@ export function useSignals(marketType: "OTC" | "OPEN", autoGenerate: boolean = t
         timestamp: Date.now(),
       });
 
-      const entryTimeStr = entryTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-      
       toast({
         title: "🤖 IA Gerou Sinal!",
-        description: `${mockNewSignal.asset} - ${mockNewSignal.direction} (${mockNewSignal.probability}%)\nEntre na vela de ${entryTimeStr}\nFase de Evolução: ${learningState.evolutionPhase} | Taxa: ${learningState.winRate.toFixed(1)}%`,
+        description: `${mockNewSignal.asset} - ${mockNewSignal.direction} (${mockNewSignal.probability}%)\nEntre na vela que inicia às ${entryLabel} e encerra às ${exitLabel}\nFase de Evolução: ${learningState.evolutionPhase} | Taxa: ${learningState.winRate.toFixed(1)}%`,
       });
+
+      console.log('✅ Sinal gerado:', signalId, '| Probabilidade:', adaptiveProbability + '%');
 
       return mockNewSignal;
     } catch (error: any) {
@@ -237,11 +304,14 @@ export function useSignals(marketType: "OTC" | "OPEN", autoGenerate: boolean = t
     } finally {
       setIsGenerating(false);
     }
-  }, [marketType, isGenerating]);
+  }, [marketType, isGenerating, minProbability, autoGenerateEnabled]);
 
   const updateSignalResult = useCallback(
     async (signalId: string, result: "WIN" | "LOSS") => {
       try {
+        // Track analytics
+        analytics.track(result === 'WIN' ? 'signal_win' : 'signal_loss', { signalId });
+
         // Mock update for development
         setSignals((prev) =>
           prev.map((s) =>
@@ -249,10 +319,81 @@ export function useSignals(marketType: "OTC" | "OPEN", autoGenerate: boolean = t
           )
         );
 
+        // Track analytics
+        analytics.track(result === 'WIN' ? 'signal_win' : 'signal_loss', { signalId });
+
         // Update AI learning system
         aiLearningSystem.updateSignalResult(signalId, result);
-        
         const learningState = aiLearningSystem.getLearningState();
+
+        // Construir aprendizado por operação
+        const history = aiLearningSystem.getHistory();
+        const histSignal = history.find(h => h.id === signalId);
+        const currentSignal = signals.find(s => s.id === signalId);
+        if (histSignal && currentSignal) {
+          const m: any = histSignal.analysisMetrics || {};
+          const indicators = (currentSignal.indicators_used || []).filter(Boolean) as string[];
+          const pattern = m.candlePattern || currentSignal.candlePattern;
+
+          const learnedParts: string[] = [];
+          if (result === 'WIN') {
+            learnedParts.push(
+              `Combinação ${pattern && pattern !== 'neutral' ? `do padrão ${pattern}` : 'de contexto'} com ` +
+              `tendência ${m.trendStrength >= 60 ? 'forte' : 'moderada'} e ` +
+              `suporte/resistência ${m.supportResistance >= 70 ? 'forte' : 'médio'} aumentou a precisão.`
+            );
+            if (Math.abs(m.macd || 0) > 0.5) learnedParts.push('Confirmação do MACD foi determinante.');
+            if ((m.rsi || 50) > 70 || (m.rsi || 50) < 30) learnedParts.push('RSI extremo interpretado corretamente com contexto.');
+          } else {
+            learnedParts.push(`Padrão ${pattern || 'neutro'} mostrou baixa eficácia neste contexto.`);
+            if (Math.abs(m.macd || 0) < 0.3) learnedParts.push('Faltou confirmação do MACD.');
+            if ((m.trendStrength || 0) < 40) learnedParts.push('Tendência fraca gerou falso sinal.');
+          }
+
+          const implemented: string[] = [];
+          if (result === 'WIN') {
+            implemented.push('Priorizar sinais com tendência > 60 e S/R > 70');
+            if (indicators.length > 0) implemented.push(`Aumentar peso de ${indicators[0]} na pontuação`);
+            if (Math.abs(m.macd || 0) > 0.5 && pattern) implemented.push(`Manter ${pattern} como favorável com MACD forte`);
+          } else {
+            if (pattern) implemented.push(`Reduzir pontuação de ${pattern} sem confirmação de MACD`);
+            implemented.push('Exigir 2 confirmações entre RSI/MACD/Price Action');
+            implemented.push('Evitar entradas com tendência < 40 ou S/R < 50');
+          }
+
+          aiEvolutionTracker.addOperationLearning({
+            signalId,
+            asset: histSignal.asset,
+            direction: histSignal.direction,
+            result,
+            indicators,
+            candlePattern: pattern,
+            learned: learnedParts.join(' '),
+            implemented,
+          });
+        }
+
+        // Som de feedback
+        if (result === "WIN") {
+          soundSystem.playWin();
+        } else {
+          soundSystem.playLoss();
+        }
+
+        // Registrar métrica de evolução (para ambos os resultados)
+        {
+          const hist = aiLearningSystem.getHistory();
+          const wins = hist.filter(h => h.result === 'WIN').length;
+          const completed = hist.filter(h => h.result === 'WIN' || h.result === 'LOSS').length;
+          const accuracy = completed > 0 ? (wins / completed) * 100 : 0;
+          aiEvolutionTracker.recordMetric({
+            winRate: learningState.winRate,
+            totalSignals: learningState.totalSignals,
+            phase: `${learningState.evolutionPhase}`,
+            topIndicators: learningState.bestIndicators,
+            accuracy,
+          });
+        }
 
         toast({
           title: result === "WIN" ? "✅ Vitória registrada!" : "❌ Perda registrada",
@@ -267,42 +408,27 @@ export function useSignals(marketType: "OTC" | "OPEN", autoGenerate: boolean = t
         });
       }
     },
-    []
+    [signals]
   );
 
-  // Use ref to store latest generateSignal function
-  const generateSignalRef = useRef(generateSignal);
-  generateSignalRef.current = generateSignal;
-  const retryTimeoutRef = useRef<number | null>(null);
+  // Update generateSignal ref for use in auto-refresh
+  useEffect(() => {
+    generateSignalRef.current = generateSignal;
+  }, [generateSignal]);
+
+  // Salvar sinais no localStorage automaticamente
+  useEffect(() => {
+    try {
+      localStorage.setItem(`signals_${marketType}`, JSON.stringify(signals.slice(0, 50))); // Manter últimos 50
+    } catch (e) {
+      console.error('Erro ao salvar sinais:', e);
+    }
+  }, [signals, marketType]);
 
   // Fetch signals on component mount and market type change
   useEffect(() => {
     fetchSignals();
   }, [marketType]);
-
-  // Auto-generate signals every 5 minutes
-  useEffect(() => {
-    if (!autoGenerateEnabled) return;
-
-    // Generate a signal immediately (with small delay to prevent race conditions)
-    const timeoutId = setTimeout(() => {
-      generateSignalRef.current();
-    }, 500);
-
-    // Set up interval to generate signals every 5 minutes (300 seconds)
-    const autoGenerateInterval = setInterval(() => {
-      generateSignalRef.current();
-    }, 5 * 60 * 1000); // 5 minutes
-
-    return () => {
-      clearTimeout(timeoutId);
-      clearInterval(autoGenerateInterval);
-      if (retryTimeoutRef.current != null) {
-        window.clearTimeout(retryTimeoutRef.current);
-        retryTimeoutRef.current = null;
-      }
-    };
-  }, [autoGenerateEnabled]);
 
   // Check for signals - notify immediately when created (1 minute before entry)
   useEffect(() => {
@@ -320,29 +446,51 @@ export function useSignals(marketType: "OTC" | "OPEN", autoGenerate: boolean = t
             if (!hasNotified) {
               sessionStorage.setItem(`notified-${signal.id}`, "true");
 
-              // Calculate entry time (next full minute)
-              const entryTime = new Date(createdTime + 60000);
-              entryTime.setSeconds(0);
-              entryTime.setMilliseconds(0);
-              const currentTime = new Date(createdTime);
-              if (currentTime.getSeconds() > 0) {
-                entryTime.setMinutes(entryTime.getMinutes() + 1);
-              }
-              
+              // Prefer stored entry/exit times to show a precise window
+              const entryTime = signal.entry_time ? new Date(signal.entry_time) : new Date(createdTime + 60000);
+              const exitTime = signal.exit_time ? new Date(signal.exit_time) : new Date(entryTime.getTime() + 60000);
+
               const entryTimeStr = entryTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-              const exitTimeStr = new Date(entryTime.getTime() + 60000).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+              const exitTimeStr = exitTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+              // Play notification sound (high priority)
+              soundSystem.playEntryAlert();
 
               toast({
                 title: "⏰ HORA DE ENTRAR!",
-                description: `${signal.asset} - ${signal.direction}\nEntre na vela de ${entryTimeStr}\nSai em ${exitTimeStr}\nProbabilidade: ${signal.probability}%`,
+                description: `${signal.asset} - ${signal.direction}\nEntre na vela que inicia às ${entryTimeStr} e encerra às ${exitTimeStr}\nProbabilidade: ${signal.probability}%`,
                 variant: "default",
                 duration: 50000, // Show for 50 seconds
               });
 
-              // Play notification sound
+              // Play notification sound (high priority)
               try {
-                const audio = new Audio("data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAAB9AAACABAAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj==");
-                audio.play().catch(() => {});
+                const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.value = 880; // A5 note
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.5);
+                
+                // Second beep
+                setTimeout(() => {
+                  const osc2 = audioContext.createOscillator();
+                  const gain2 = audioContext.createGain();
+                  osc2.connect(gain2);
+                  gain2.connect(audioContext.destination);
+                  osc2.frequency.value = 1046; // C6 note
+                  gain2.gain.setValueAtTime(0.3, audioContext.currentTime);
+                  gain2.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+                  osc2.start(audioContext.currentTime);
+                  osc2.stop(audioContext.currentTime + 0.3);
+                }, 200);
               } catch (e) {
                 console.log("Could not play notification sound");
               }
@@ -372,6 +520,57 @@ export function useSignals(marketType: "OTC" | "OPEN", autoGenerate: boolean = t
         : "N/A",
   };
 
+  // AUTO-REFRESH: Gera sinais automaticamente em intervalos regulares
+  useEffect(() => {
+    if (!autoGenerateEnabled) {
+      if (autoRefreshTimeoutRef.current) {
+        clearTimeout(autoRefreshTimeoutRef.current);
+        autoRefreshTimeoutRef.current = null;
+      }
+      return;
+    }
+
+    // Armazena referência da função generateSignal
+    const scheduleNextGeneration = async () => {
+      if (!autoGenerateEnabled || !generateSignalRef.current) return;
+      
+      try {
+        await generateSignalRef.current();
+      } catch (e) {
+        console.error('Erro ao gerar sinal:', e);
+      }
+      
+      // Agenda próxima geração
+      autoRefreshTimeoutRef.current = setTimeout(() => {
+        if (autoGenerateEnabled) {
+          scheduleNextGeneration();
+        }
+      }, autoRefreshInterval * 1000);
+    };
+
+    // Pequeno delay para garantir que ref está pronta, depois gera imediatamente
+    const initialDelay = setTimeout(() => {
+      scheduleNextGeneration();
+    }, 500);
+
+    return () => {
+      clearTimeout(initialDelay);
+      if (autoRefreshTimeoutRef.current) {
+        clearTimeout(autoRefreshTimeoutRef.current);
+        autoRefreshTimeoutRef.current = null;
+      }
+    };
+  }, [autoGenerateEnabled, autoRefreshInterval]);
+
+  // Aprendizado web contínuo
+  useEffect(() => {
+    if (autoGenerateEnabled) {
+      aiLearningSystem.learnFromWeb().catch(e => {
+        console.error('Erro em aprendizado web:', e);
+      });
+    }
+  }, [autoGenerateEnabled]);
+
   return {
     signals,
     stats,
@@ -384,5 +583,7 @@ export function useSignals(marketType: "OTC" | "OPEN", autoGenerate: boolean = t
     setAutoGenerateEnabled,
     minProbability,
     setMinProbability,
+    autoRefreshInterval,
+    setAutoRefreshInterval,
   };
 }

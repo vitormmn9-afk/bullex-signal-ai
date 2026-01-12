@@ -1,4 +1,7 @@
-// AI Learning System - Evolves based on results
+// AI Learning System - Evolves based on results with Web Integration
+
+import { webLearningSystem, type MarketInsight } from './webIntegration';
+import { performAdvancedCandleAnalysis, type AdvancedCandleAnalysis } from './advancedCandleAnalysis';
 
 export interface SignalHistory {
   id: string;
@@ -19,6 +22,8 @@ export interface SignalHistory {
   };
   result: 'WIN' | 'LOSS' | 'PENDING' | null;
   timestamp: number;
+  webInsights?: MarketInsight[];
+  advancedCandleAnalysis?: AdvancedCandleAnalysis;
 }
 
 export interface AILearningState {
@@ -28,6 +33,14 @@ export interface AILearningState {
   patternSuccessRates: Record<string, number>;
   weaknessPatterns: string[];
   evolutionPhase: number;
+}
+
+export interface OperationalConfig {
+  minTrendStrength: number;
+  minSupportResistance: number;
+  requireConfirmations: number; // quantidade de confirmações entre RSI/MACD/Price Action
+  disallowedPatterns: Set<string>;
+  indicatorWeights: Record<string, number>; // pesos extras por indicador
 }
 
 const LEARNING_STORAGE_KEY = 'bullex_ai_learning_history';
@@ -42,6 +55,13 @@ export class AILearningSystem {
     patternSuccessRates: {},
     weaknessPatterns: [],
     evolutionPhase: 1,
+  };
+  private operationalConfig: OperationalConfig = {
+    minTrendStrength: 40,
+    minSupportResistance: 50,
+    requireConfirmations: 1,
+    disallowedPatterns: new Set<string>(),
+    indicatorWeights: {},
   };
 
   constructor() {
@@ -220,12 +240,112 @@ export class AILearningSystem {
       score -= 10;
     }
 
+    // Operational rules adjustments
+    // Penaliza padrões desautorizados
+    if (this.operationalConfig.disallowedPatterns.has(pattern)) {
+      score -= 15;
+    }
+    // Pesos por indicador preferido
+    indicators.forEach(ind => {
+      const w = this.operationalConfig.indicatorWeights[ind];
+      if (w) score += w;
+    });
+    // Confirmações exigidas: se menos que o necessário, reduzir score
+    const confirmations = this.countConfirmationsFromMetrics(baseScore);
+    if (confirmations < this.operationalConfig.requireConfirmations) {
+      score -= 20;
+    }
+    // Ajuste de mínimos (proxy pelos scores do baseScore)
+    // Como não temos métricas diretas aqui, aplicamos pequenos ajustes no final em evolveAI()
+
     // Apply evolution multiplier
     const evolutionPhase = this.evolveAI();
     const multiplier = 1 + (evolutionPhase - 1) * 0.05;
     score *= multiplier;
 
     return Math.min(100, Math.max(50, Math.round(score)));
+  }
+
+  private countConfirmationsFromMetrics(baseScore: number): number {
+    // Heurística simples: usar baseScore como proxy de confirmações
+    // baseScore > 75 => 3 confirmações; > 60 => 2; senão 1
+    if (baseScore > 75) return 3;
+    if (baseScore > 60) return 2;
+    return 1;
+  }
+
+  getOperationalConfig(): OperationalConfig {
+    return {
+      ...this.operationalConfig,
+      disallowedPatterns: new Set(this.operationalConfig.disallowedPatterns),
+      indicatorWeights: { ...this.operationalConfig.indicatorWeights },
+    };
+  }
+
+  updateOperationalConfig(partial: Partial<OperationalConfig>) {
+    if (partial.minTrendStrength !== undefined) this.operationalConfig.minTrendStrength = partial.minTrendStrength;
+    if (partial.minSupportResistance !== undefined) this.operationalConfig.minSupportResistance = partial.minSupportResistance;
+    if (partial.requireConfirmations !== undefined) this.operationalConfig.requireConfirmations = partial.requireConfirmations;
+    if (partial.disallowedPatterns) {
+      partial.disallowedPatterns.forEach(p => this.operationalConfig.disallowedPatterns.add(p));
+    }
+    if (partial.indicatorWeights) {
+      Object.entries(partial.indicatorWeights).forEach(([k, v]) => {
+        this.operationalConfig.indicatorWeights[k] = v;
+      });
+    }
+  }
+
+  applyOperationalSuggestion(text: string): { applied: boolean; response: string; changes: string[] } {
+    const changes: string[] = [];
+    const lower = text.toLowerCase();
+
+    // Regras básicas
+    const setConfirmations = (n: number) => {
+      this.updateOperationalConfig({ requireConfirmations: n });
+      changes.push(`Exigir ${n} confirmações`);
+    };
+
+    // Detectar confirmações
+    if (lower.includes('2 confirma') || lower.includes('duas confirma')) setConfirmations(2);
+    else if (lower.includes('3 confirma') || lower.includes('três confirma') || lower.includes('tres confirma')) setConfirmations(3);
+
+    // Detectar padrões a evitar
+    const patternKeywords = ['doji', 'hammer', 'shootingstar', 'shooting star', 'strongbullish', 'strongbearish'];
+    patternKeywords.forEach(p => {
+      if (lower.includes(p)) {
+        const norm = p.replace(' ', '');
+        this.updateOperationalConfig({ disallowedPatterns: new Set([norm]) });
+        changes.push(`Reduzir pontuação do padrão ${norm}`);
+      }
+    });
+
+    // Detectar pesos de indicadores
+    const indicators = ['rsi', 'macd', 'bollinger', 'bbands', 'price action', 'priceaction'];
+    indicators.forEach(ind => {
+      if (lower.includes('aumentar peso') && lower.includes(ind)) {
+        const key = ind === 'bollinger' ? 'bbands' : ind.replace(' ', '');
+        this.updateOperationalConfig({ indicatorWeights: { [key]: 5 } });
+        changes.push(`Aumentar peso de ${key}`);
+      }
+      if (lower.includes('reduzir peso') && lower.includes(ind)) {
+        const key = ind === 'bollinger' ? 'bbands' : ind.replace(' ', '');
+        this.updateOperationalConfig({ indicatorWeights: { [key]: -3 } });
+        changes.push(`Reduzir peso de ${key}`);
+      }
+    });
+
+    // Detectar limites mínimos
+    const trend40 = lower.includes('tendência < 40') || lower.includes('tendencia < 40') || lower.includes('tendência menor que 40');
+    const sr50 = lower.includes('s/r < 50') || lower.includes('suporte') && lower.includes('50') || lower.includes('resistência') && lower.includes('50');
+    if (trend40) { this.updateOperationalConfig({ minTrendStrength: 40 }); changes.push('Evitar entradas com tendência < 40'); }
+    if (sr50) { this.updateOperationalConfig({ minSupportResistance: 50 }); changes.push('Evitar entradas com S/R < 50'); }
+
+    const applied = changes.length > 0;
+    const response = applied
+      ? '✅ Sugestões aplicadas ao operacional.'
+      : 'ℹ️ Sugestão recebida, mas não identifiquei regras claras para aplicar automaticamente. Pode detalhar?';
+    return { applied, response, changes };
   }
 
   // Private methods
@@ -271,6 +391,73 @@ export class AILearningSystem {
   // Get signal history for analysis
   getHistory(): SignalHistory[] {
     return [...this.history];
+  }
+
+  // Continuous learning from web - melhora a IA com conhecimento
+  async learnFromWeb(): Promise<void> {
+    try {
+      // Pesquisa conhecimento relevante
+      const context = this.identifyLearningContext();
+      
+      // Busca insights para cada categoria
+      const insights = await webLearningSystem.searchMarketKnowledge(
+        context.topic,
+        context.keywords
+      );
+
+      // Aplica insights aos sinais recentes
+      if (this.history.length > 0) {
+        const recentSignals = this.history.slice(-10);
+        recentSignals.forEach(signal => {
+          signal.webInsights = insights;
+        });
+        this.saveHistory();
+      }
+
+      // Faz aprendizado contínuo
+      await webLearningSystem.continuousLearning();
+    } catch (e) {
+      console.error('Erro ao aprender da web:', e);
+    }
+  }
+
+  // Identifica contexto para aprendizado
+  private identifyLearningContext(): { topic: string; keywords: string[] } {
+    const winRate = this.getWinRate();
+    const patterns = this.learningState.patternSuccessRates;
+    
+    let topic = 'análise técnica';
+    let keywords = [];
+
+    if (winRate < 50) {
+      topic = 'padrões de reversão';
+      keywords = ['reversão', 'suporte', 'resistência'];
+    } else if (this.learningState.bestIndicators.length > 0) {
+      topic = `indicadores ${this.learningState.bestIndicators[0]}`;
+      keywords = this.learningState.bestIndicators;
+    } else {
+      topic = 'gerenciamento de risco';
+      keywords = ['risco', 'stop', 'money management'];
+    }
+
+    return { topic, keywords };
+  }
+
+  // Obtém insights aplicáveis para um contexto específico
+  getApplicableWebInsights(context: any): MarketInsight[] {
+    return webLearningSystem.getApplicableInsights(context);
+  }
+
+  // Retorna estatísticas completas com aprendizado web
+  getCompleteLearningStats() {
+    const webStats = webLearningSystem.getLearningStats();
+    return {
+      aiLearning: this.learningState,
+      webLearning: webStats,
+      totalInsightSources: webStats.totalInsightsLearned,
+      winRate: this.getWinRate(),
+      evolutionPhase: this.learningState.evolutionPhase
+    };
   }
 }
 

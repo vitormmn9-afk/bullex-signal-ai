@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, memo } from "react";
 import { ArrowUp, ArrowDown, Clock, TrendingUp, Zap, AlertCircle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -13,10 +13,12 @@ interface SignalCardProps {
   reasoning?: string;
   result?: "WIN" | "LOSS" | "PENDING" | null;
   createdAt: string;
+  entryTime?: string;
+  exitTime?: string;
   isLatest?: boolean;
 }
 
-export function SignalCard({
+export const SignalCard = memo(function SignalCard({
   asset,
   direction,
   probability,
@@ -25,6 +27,8 @@ export function SignalCard({
   reasoning,
   result,
   createdAt,
+  entryTime,
+  exitTime,
   isLatest,
 }: SignalCardProps) {
   const [timeRemaining, setTimeRemaining] = useState<number>(expirationTime);
@@ -60,6 +64,13 @@ export function SignalCard({
     hour: "2-digit",
     minute: "2-digit",
   });
+
+  const entryWindow = (() => {
+    if (!entryTime || !exitTime) return null;
+    const entryLabel = new Date(entryTime).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    const exitLabel = new Date(exitTime).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    return { entryLabel, exitLabel };
+  })();
 
   const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
@@ -160,6 +171,13 @@ export function SignalCard({
           ))}
         </div>
 
+        {/* Entry window */}
+        {entryWindow && (
+          <div className="mb-3 text-xs text-muted-foreground font-semibold bg-primary/5 border border-primary/30 rounded-lg px-3 py-2">
+            Entre na vela que inicia às {entryWindow.entryLabel} e encerra às {entryWindow.exitLabel}
+          </div>
+        )}
+
         {/* Reasoning */}
         {reasoning && (
           <p className="text-xs text-muted-foreground line-clamp-2 mb-3">
@@ -183,4 +201,4 @@ export function SignalCard({
       </div>
     </Card>
   );
-}
+});

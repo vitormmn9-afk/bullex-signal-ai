@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, lazy, Suspense } from "react";
 import { 
   TrendingUp, 
   Target, 
@@ -6,21 +6,31 @@ import {
   XCircle, 
   Activity,
   CheckCircle,
-  X
+  X,
+  Filter
 } from "lucide-react";
 import { SignalCard } from "@/components/SignalCard";
 import { StatsCard } from "@/components/StatsCard";
 import { MarketToggle } from "@/components/MarketToggle";
 import { GenerateButton } from "@/components/GenerateButton";
 import { AutoGenerateToggle } from "@/components/AutoGenerateToggle";
-import { PerformanceChart } from "@/components/PerformanceChart";
+const PerformanceChart = lazy(() => import("@/components/PerformanceChart").then(m => ({ default: m.PerformanceChart })));
 import { useSignals } from "@/hooks/useSignals";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Skeleton } from "@/components/ui/skeleton";
+import { SoundToggle } from "@/components/SoundToggle";
+import { AIEvolutionPanel } from "@/components/AIEvolutionPanel";
+import { Brain, NotebookPen, Database, Cpu } from "lucide-react";
+import { AILearningLogPanel } from "@/components/AILearningLogPanel";
+import { KnowledgePanel } from "@/components/KnowledgePanel";
+import AIControlDashboard from "@/components/AIControlDashboard";
 
 const Index = () => {
   const [marketType, setMarketType] = useState<"OTC" | "OPEN">("OPEN");
+  const [directionFilter, setDirectionFilter] = useState<"ALL" | "CALL" | "PUT">("ALL");
+  const [showFilters, setShowFilters] = useState(false);
+  const [activeTab, setActiveTab] = useState<"signals" | "evolution" | "learning" | "knowledge" | "ai-control">("signals");
   const { 
     signals, 
     stats, 
@@ -31,7 +41,9 @@ const Index = () => {
     autoGenerateEnabled,
     setAutoGenerateEnabled,
     minProbability,
-    setMinProbability
+    setMinProbability,
+    autoRefreshInterval,
+    setAutoRefreshInterval
   } = useSignals(marketType, true);
 
   // Mock chart data - would come from real performance metrics
@@ -43,7 +55,9 @@ const Index = () => {
     { name: "Sex", wins: 11, losses: 3 },
   ];
 
-  const displaySignals = signals.filter((s) => Number(s.probability) >= minProbability);
+  const displaySignals = signals
+    .filter((s) => Number(s.probability) >= minProbability)
+    .filter((s) => directionFilter === "ALL" || s.direction === directionFilter);
 
   return (
     <div className="min-h-screen bg-background">
@@ -60,9 +74,12 @@ const Index = () => {
                 <p className="text-xs text-muted-foreground">Sinais inteligentes com IA</p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
-              <span className="text-xs text-muted-foreground">Online</span>
+            <div className="flex items-center gap-3">
+              <SoundToggle />
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
+                <span className="text-xs text-muted-foreground">Online</span>
+              </div>
             </div>
           </div>
         </div>
@@ -72,8 +89,60 @@ const Index = () => {
         {/* Market Toggle */}
         <MarketToggle value={marketType} onChange={setMarketType} />
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {/* Tab Navigation */}
+        <div className="flex gap-2 bg-card/50 p-2 rounded-lg border border-border/50 overflow-x-auto">
+          <Button
+            variant={activeTab === "signals" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setActiveTab("signals")}
+            className="flex-1 min-w-max"
+          >
+            <Activity className="w-4 h-4 mr-2" />
+            Sinais
+          </Button>
+          <Button
+            variant={activeTab === "evolution" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setActiveTab("evolution")}
+            className="flex-1 min-w-max"
+          >
+            <Brain className="w-4 h-4 mr-2" />
+            Evolução da IA
+          </Button>
+          <Button
+            variant={activeTab === "learning" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setActiveTab("learning")}
+            className="flex-1 min-w-max"
+          >
+            <NotebookPen className="w-4 h-4 mr-2" />
+            Aprendizados da IA
+          </Button>
+          <Button
+            variant={activeTab === "knowledge" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setActiveTab("knowledge")}
+            className="flex-1 min-w-max"
+          >
+            <Database className="w-4 h-4 mr-2" />
+            Base de Conhecimento
+          </Button>
+          <Button
+            variant={activeTab === "ai-control" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setActiveTab("ai-control")}
+            className="flex-1 min-w-max"
+          >
+            <Cpu className="w-4 h-4 mr-2" />
+            AI Control
+          </Button>
+        </div>
+
+        {/* Content Based on Tab */}
+        {activeTab === "signals" ? (
+          <>
+          {/* Stats Grid */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <StatsCard
             title="Taxa de Acerto"
             value={`${stats.accuracy}%`}
@@ -105,7 +174,63 @@ const Index = () => {
         </div>
 
         {/* Performance Chart */}
-        <PerformanceChart data={chartData} />
+        <Suspense fallback={<div className="h-64 bg-card/50 rounded-lg animate-pulse" />}>
+          <PerformanceChart data={chartData} />
+        </Suspense>
+
+        {/* Filters Toggle */}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowFilters(!showFilters)}
+          className="w-full"
+        >
+          <Filter className="w-4 h-4 mr-2" />
+          {showFilters ? "Ocultar" : "Mostrar"} Filtros Avançados
+        </Button>
+
+        {/* Advanced Filters */}
+        {showFilters && (
+          <div className="space-y-3 bg-card/50 p-4 rounded-lg border border-border/50">
+            <div>
+              <span className="text-sm text-muted-foreground mb-2 block">Filtrar por direção</span>
+              <div className="flex gap-2">
+                <Button
+                  variant={directionFilter === "ALL" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setDirectionFilter("ALL")}
+                  className="flex-1"
+                >
+                  Todos
+                </Button>
+                <Button
+                  variant={directionFilter === "CALL" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setDirectionFilter("CALL")}
+                  className="flex-1"
+                >
+                  CALL ↑
+                </Button>
+                <Button
+                  variant={directionFilter === "PUT" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setDirectionFilter("PUT")}
+                  className="flex-1"
+                >
+                  PUT ↓
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+                  </>
+        ) : activeTab === "evolution" ? (
+          <AIEvolutionPanel />
+        ) : activeTab === "learning" ? (
+          <AILearningLogPanel />
+        ) : (
+          <KnowledgePanel />
+        )}
 
         {/* Confidence Threshold */}
         <div className="space-y-2">
@@ -122,6 +247,24 @@ const Index = () => {
           onToggle={setAutoGenerateEnabled}
           disabled={isGenerating}
         />
+
+        {/* Auto Refresh Interval */}
+        {autoGenerateEnabled && (
+          <div className="space-y-2 bg-card/50 p-4 rounded-lg border border-border/50">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">⏱️ Intervalo de geração</span>
+              <span className="text-sm font-medium">{autoRefreshInterval}s</span>
+            </div>
+            <Slider 
+              value={[autoRefreshInterval]} 
+              min={30} 
+              max={300} 
+              step={10} 
+              onValueChange={(v) => setAutoRefreshInterval(v[0])} 
+            />
+            <p className="text-xs text-muted-foreground">A IA gerará novos sinais automaticamente a cada {autoRefreshInterval} segundos</p>
+          </div>
+        )}
 
         {/* Generate Button */}
         <GenerateButton onClick={generateSignal} isLoading={isGenerating} disabled={autoGenerateEnabled} />
@@ -144,7 +287,11 @@ const Index = () => {
               <p>Nenhum sinal ≥ {minProbability}% encontrado</p>
               <p className="text-sm">Ative a geração automática ou tente novamente em alguns segundos</p>
             </div>
-          ) : (
+          ) : activeTab === "knowledge" ? (
+          <KnowledgePanel />
+        ) : activeTab === "ai-control" ? (
+          <AIControlDashboard />
+        ) : (
             <div className="space-y-3">
               {displaySignals.map((signal, idx) => (
                 <div key={signal.id} className="animate-fade-in">
@@ -157,6 +304,8 @@ const Index = () => {
                     reasoning={signal.ai_reasoning || undefined}
                     result={signal.result}
                     createdAt={signal.created_at}
+                    entryTime={signal.entry_time}
+                    exitTime={signal.exit_time}
                     isLatest={idx === 0 && signal.result === "PENDING"}
                   />
                   

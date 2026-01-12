@@ -1,4 +1,4 @@
-import { useState, lazy, Suspense } from "react";
+import { useState, lazy, Suspense, useEffect } from "react";
 import { 
   TrendingUp, 
   Target, 
@@ -25,6 +25,7 @@ import { Brain, NotebookPen, Database, Cpu } from "lucide-react";
 import { AILearningLogPanel } from "@/components/AILearningLogPanel";
 import { KnowledgePanel } from "@/components/KnowledgePanel";
 import AIControlDashboard from "@/components/AIControlDashboard";
+import { aiSignalAnalyzer } from "@/lib/aiSignalAnalyzer";
 
 const Index = () => {
   const [marketType, setMarketType] = useState<"OTC" | "OPEN">("OPEN");
@@ -58,6 +59,38 @@ const Index = () => {
   const displaySignals = signals
     .filter((s) => Number(s.probability) >= minProbability)
     .filter((s) => directionFilter === "ALL" || s.direction === directionFilter);
+
+  // ✅ SIMULAÇÃO DE PREÇOS PARA AUTO-ANÁLISE
+  useEffect(() => {
+    const assets = [
+      "EUR/USD", "GBP/USD", "USD/JPY", "AUD/USD", "USD/CAD",
+      "EUR/GBP", "EUR/JPY", "GBP/JPY", "NZD/USD", "USD/CHF",
+      "EUR/USD OTC", "GBP/USD OTC", "USD/JPY OTC", "AUD/USD OTC"
+    ];
+
+    const priceInterval = setInterval(() => {
+      assets.forEach(asset => {
+        const basePrice = 100 + Math.random() * 50;
+        const volatility = 2; // 2% de volatilidade
+        
+        const priceData = {
+          asset,
+          timestamp: Date.now(),
+          open: basePrice,
+          high: basePrice + (Math.random() * volatility),
+          low: basePrice - (Math.random() * volatility),
+          close: basePrice + ((Math.random() - 0.5) * volatility),
+          volume: Math.floor(Math.random() * 1000000),
+        };
+
+        aiSignalAnalyzer.updatePrice(priceData);
+      });
+    }, 3000); // Atualizar preços a cada 3 segundos
+
+    console.log('📊 Simulação de preços iniciada para auto-análise');
+
+    return () => clearInterval(priceInterval);
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">

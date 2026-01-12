@@ -6,6 +6,7 @@ import { performAdvancedCandleAnalysis } from "@/lib/advancedCandleAnalysis";
 import { soundSystem } from "@/lib/soundSystem";
 import { analytics } from "@/lib/analytics";
 import { aiEvolutionTracker } from "@/lib/aiEvolutionTracker";
+import { aiSignalAnalyzer } from "@/lib/aiSignalAnalyzer";
 
 // Lazy import Supabase para evitar travamento se não estiver configurado
 let supabase: any = null;
@@ -115,6 +116,58 @@ export function useSignals(marketType: "OTC" | "OPEN", autoGenerate: boolean = t
   useEffect(() => {
     console.log('🤖 Auto-geração:', autoGenerateEnabled ? 'ATIVA' : 'INATIVA', '| Intervalo:', autoRefreshInterval + 's');
   }, [autoGenerateEnabled, autoRefreshInterval]);
+
+  // ✅ LISTENER PARA AUTO-ANÁLISE DE WIN/LOSS
+  useEffect(() => {
+    const handleWin = (event: any) => {
+      const analysis = event.detail;
+      console.log('🎉 AUTO-WIN detectado:', analysis.signalId);
+      
+      setSignals((prev) =>
+        prev.map((s) =>
+          s.id === analysis.signalId
+            ? { ...s, result: 'WIN', executed_at: new Date().toISOString() }
+            : s
+        )
+      );
+
+      toast({
+        title: "✅ Vitória Automática!",
+        description: `${analysis.asset} ${analysis.direction} - Lucro: ${analysis.profitLoss?.toFixed(2)}%`,
+      });
+
+      soundSystem.playWinSound();
+    };
+
+    const handleLoss = (event: any) => {
+      const analysis = event.detail;
+      console.log('❌ AUTO-LOSS detectado:', analysis.signalId);
+      
+      setSignals((prev) =>
+        prev.map((s) =>
+          s.id === analysis.signalId
+            ? { ...s, result: 'LOSS', executed_at: new Date().toISOString() }
+            : s
+        )
+      );
+
+      toast({
+        title: "❌ Perda Automática",
+        description: `${analysis.asset} ${analysis.direction} - Prejuízo: ${analysis.profitLoss?.toFixed(2)}%`,
+        variant: "destructive",
+      });
+
+      soundSystem.playLossSound();
+    };
+
+    window.addEventListener('signal-win', handleWin);
+    window.addEventListener('signal-loss', handleLoss);
+
+    return () => {
+      window.removeEventListener('signal-win', handleWin);
+      window.removeEventListener('signal-loss', handleLoss);
+    };
+  }, [toast]);
 
   const autoRefreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -266,6 +319,17 @@ export function useSignals(marketType: "OTC" | "OPEN", autoGenerate: boolean = t
       };
 
       setSignals((prev) => [mockNewSignal, ...prev]);
+
+      // ✅ REGISTRAR SINAL NO AUTO-ANALYZER PARA ANÁLISE AUTOMÁTICA
+      aiSignalAnalyzer.registerSignal({
+        id: mockNewSignal.id,
+        asset: mockNewSignal.asset,
+        direction: mockNewSignal.direction,
+        entryPrice: analysis.currentPrice || 100, // Preço simulado
+        confidence: mockNewSignal.probability,
+        timestamp: Date.now(),
+      });
+      console.log('📊 Sinal registrado no auto-analyzer:', mockNewSignal.id);
 
       // Track analytics
       analytics.track('signal_generated', {

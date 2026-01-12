@@ -73,6 +73,12 @@ export class AISignalAnalyzer {
     };
 
     this.activeSignals.set(signal.id, analysis);
+    console.log('📊 Sinal registrado para análise:', {
+      id: signal.id,
+      asset: signal.asset,
+      direction: signal.direction,
+      entryPrice: signal.entryPrice,
+    });
     this.startAnalysis();
   }
 
@@ -88,6 +94,12 @@ export class AISignalAnalyzer {
     // Manter histórico limitado
     if (history.length > 1000) {
       history.shift();
+    }
+
+    // Log apenas se houver sinais ativos para este ativo
+    const activeForAsset = Array.from(this.activeSignals.values()).filter(s => s.asset === price.asset);
+    if (activeForAsset.length > 0) {
+      console.log(`💹 Preço atualizado ${price.asset}: ${price.close.toFixed(2)} | Sinais ativos: ${activeForAsset.length}`);
     }
 
     // Analisar sinais com novo preço
@@ -122,8 +134,16 @@ export class AISignalAnalyzer {
 
           if (result.result === 'WIN') {
             this.callbacks.onWin?.(analysis);
+            // Disparar evento global para UI
+            const event = new CustomEvent('signal-win', { detail: analysis });
+            window.dispatchEvent(event);
+            console.log('🎉 WIN! Evento disparado:', analysis.signalId);
           } else if (result.result === 'LOSS') {
             this.callbacks.onLoss?.(analysis);
+            // Disparar evento global para UI
+            const event = new CustomEvent('signal-loss', { detail: analysis });
+            window.dispatchEvent(event);
+            console.log('❌ LOSS! Evento disparado:', analysis.signalId);
           }
         }
       }
@@ -193,6 +213,16 @@ export class AISignalAnalyzer {
     const highestHigh = currentPrice.high;
     const lowestLow = currentPrice.low;
     const close = currentPrice.close;
+
+    // Log para debug
+    const profitLossPercent = this.calculateProfitLoss(analysis.entryPrice, close, analysis.direction);
+    console.log(`🔍 Analisando ${analysis.signalId} (${analysis.direction}):`, {
+      entryPrice: analysis.entryPrice.toFixed(2),
+      currentClose: close.toFixed(2),
+      profitLoss: profitLossPercent.toFixed(2) + '%',
+      targetWin: (this.PROFIT_TARGET * 100).toFixed(1) + '%',
+      targetLoss: (this.STOP_LOSS * 100).toFixed(1) + '%'
+    });
 
     // Para CALL (aposta em alta)
     if (analysis.direction === 'CALL') {

@@ -21,17 +21,18 @@ import { Slider } from "@/components/ui/slider";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SoundToggle } from "@/components/SoundToggle";
 import { AIEvolutionPanel } from "@/components/AIEvolutionPanel";
-import { Brain, NotebookPen, Database, Cpu } from "lucide-react";
+import { Brain, NotebookPen, Database, Cpu, FlaskConical } from "lucide-react";
 import { AILearningLogPanel } from "@/components/AILearningLogPanel";
 import { KnowledgePanel } from "@/components/KnowledgePanel";
 import AIControlDashboard from "@/components/AIControlDashboard";
 import { aiSignalAnalyzer } from "@/lib/aiSignalAnalyzer";
+import AutoAnalysisTest from "@/components/AutoAnalysisTest";
 
 const Index = () => {
   const [marketType, setMarketType] = useState<"OTC" | "OPEN">("OPEN");
   const [directionFilter, setDirectionFilter] = useState<"ALL" | "CALL" | "PUT">("ALL");
   const [showFilters, setShowFilters] = useState(false);
-  const [activeTab, setActiveTab] = useState<"signals" | "evolution" | "learning" | "knowledge" | "ai-control">("signals");
+  const [activeTab, setActiveTab] = useState<"signals" | "evolution" | "learning" | "knowledge" | "ai-control" | "test">("signals");
   const { 
     signals, 
     stats, 
@@ -132,6 +133,15 @@ const Index = () => {
           >
             <Activity className="w-4 h-4 mr-2" />
             Sinais
+          </Button>
+          <Button
+            variant={activeTab === "test" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setActiveTab("test")}
+            className="flex-1 min-w-max bg-yellow-900/20"
+          >
+            <FlaskConical className="w-4 h-4 mr-2" />
+            Teste WIN/LOSS
           </Button>
           <Button
             variant={activeTab === "evolution" ? "default" : "ghost"}
@@ -320,7 +330,9 @@ const Index = () => {
               <p>Nenhum sinal ≥ {minProbability}% encontrado</p>
               <p className="text-sm">Ative a geração automática ou tente novamente em alguns segundos</p>
             </div>
-          ) : activeTab === "knowledge" ? (
+          ) : activeTab === "test" ? (
+          <AutoAnalysisTest />
+        ) : activeTab === "knowledge" ? (
           <KnowledgePanel />
         ) : activeTab === "ai-control" ? (
           <AIControlDashboard />

@@ -7,6 +7,7 @@ import { soundSystem } from "@/lib/soundSystem";
 import { analytics } from "@/lib/analytics";
 import { aiEvolutionTracker } from "@/lib/aiEvolutionTracker";
 import { aiSignalAnalyzer } from "@/lib/aiSignalAnalyzer";
+import { continuousLearning } from "@/lib/continuousLearning";
 
 // Lazy import Supabase para evitar travamento se não estiver configurado
 let supabase: any = null;
@@ -136,7 +137,7 @@ export function useSignals(marketType: "OTC" | "OPEN", autoGenerate: boolean = t
         description: `${analysis.asset} ${analysis.direction} - Lucro: ${analysis.profitLoss?.toFixed(2)}%`,
       });
 
-      soundSystem.playWinSound();
+      soundSystem.playWin();
     };
 
     const handleLoss = (event: any) => {
@@ -157,15 +158,31 @@ export function useSignals(marketType: "OTC" | "OPEN", autoGenerate: boolean = t
         variant: "destructive",
       });
 
-      soundSystem.playLossSound();
+      soundSystem.playLoss();
+    };
+
+    // ✅ LISTENER PARA ATUALIZAÇÕES DO APRENDIZADO CONTÍNUO
+    const handleLearningUpdate = (event: any) => {
+      const { cycle, newOperations, accuracy, phase } = event.detail;
+      console.log(`🧠 Aprendizado Contínuo #${cycle}: ${newOperations} ops analisadas | Precisão: ${accuracy.toFixed(1)}%`);
+      
+      // Notificar usuário sobre evolução importante
+      if (cycle % 5 === 0) { // A cada 5 ciclos
+        toast({
+          title: `🧠 IA Evoluindo Continuamente`,
+          description: `Ciclo #${cycle} | ${newOperations} ops aprendidas | Fase ${phase} | Precisão: ${accuracy.toFixed(1)}%`,
+        });
+      }
     };
 
     window.addEventListener('signal-win', handleWin);
     window.addEventListener('signal-loss', handleLoss);
+    window.addEventListener('ai-learning-updated', handleLearningUpdate);
 
     return () => {
       window.removeEventListener('signal-win', handleWin);
       window.removeEventListener('signal-loss', handleLoss);
+      window.removeEventListener('ai-learning-updated', handleLearningUpdate);
     };
   }, [toast]);
 
@@ -325,11 +342,18 @@ export function useSignals(marketType: "OTC" | "OPEN", autoGenerate: boolean = t
         id: mockNewSignal.id,
         asset: mockNewSignal.asset,
         direction: mockNewSignal.direction,
-        entryPrice: analysis.currentPrice || 100, // Preço simulado
+        entryPrice: 100, // Preço simulado
+          exitTime: new Date(exitISO).getTime(), // Timestamp de quando a vela termina
         confidence: mockNewSignal.probability,
         timestamp: Date.now(),
       });
-      console.log('📊 Sinal registrado no auto-analyzer:', mockNewSignal.id);
+      console.log('📊 Sinal registrado no auto-analyzer:', {
+        id: mockNewSignal.id,
+        asset: mockNewSignal.asset,
+        direction: mockNewSignal.direction,
+        entryTime: new Date(entryISO).toLocaleTimeString('pt-BR'),
+        exitTime: new Date(exitISO).toLocaleTimeString('pt-BR'),
+      });
 
       // Track analytics
       analytics.track('signal_generated', {

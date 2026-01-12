@@ -459,6 +459,26 @@ export class AILearningSystem {
       evolutionPhase: this.learningState.evolutionPhase
     };
   }
+
+  // Reforça um padrão específico (usado pelo aprendizado contínuo)
+  reinforcePattern(pattern: string, multiplier: number = 1.15): void {
+    if (!this.learningState.patternSuccessRates[pattern]) {
+      this.learningState.patternSuccessRates[pattern] = 50;
+    }
+    this.learningState.patternSuccessRates[pattern] *= multiplier;
+    this.saveHistory();
+    console.log(`📈 Padrão ${pattern} reforçado: ${this.learningState.patternSuccessRates[pattern].toFixed(1)}%`);
+  }
+
+  // Penaliza um padrão específico (usado pelo aprendizado contínuo)
+  penalizePattern(pattern: string, multiplier: number = 0.85): void {
+    if (!this.learningState.patternSuccessRates[pattern]) {
+      this.learningState.patternSuccessRates[pattern] = 50;
+    }
+    this.learningState.patternSuccessRates[pattern] *= multiplier;
+    this.saveHistory();
+    console.log(`📉 Padrão ${pattern} penalizado: ${this.learningState.patternSuccessRates[pattern].toFixed(1)}%`);
+  }
 }
 
 // Export singleton instance

@@ -26,7 +26,8 @@ import { AILearningLogPanel } from "@/components/AILearningLogPanel";
 import { KnowledgePanel } from "@/components/KnowledgePanel";
 import AIControlDashboard from "@/components/AIControlDashboard";
 import { aiSignalAnalyzer } from "@/lib/aiSignalAnalyzer";
-import AutoAnalysisTest from "@/components/AutoAnalysisTest";
+import AutoAnalysisTestNew from "@/components/AutoAnalysisTestNew";
+import { ContinuousLearningPanel } from "@/components/ContinuousLearningPanel";
 
 const Index = () => {
   const [marketType, setMarketType] = useState<"OTC" | "OPEN">("OPEN");
@@ -266,6 +267,10 @@ const Index = () => {
             </div>
           </div>
         )}
+
+        {/* Continuous Learning Panel */}
+        <ContinuousLearningPanel />
+
                   </>
         ) : activeTab === "evolution" ? (
           <AIEvolutionPanel />
@@ -331,7 +336,7 @@ const Index = () => {
               <p className="text-sm">Ative a geração automática ou tente novamente em alguns segundos</p>
             </div>
           ) : activeTab === "test" ? (
-          <AutoAnalysisTest />
+          <AutoAnalysisTestNew />
         ) : activeTab === "knowledge" ? (
           <KnowledgePanel />
         ) : activeTab === "ai-control" ? (

@@ -6,11 +6,13 @@ export interface SignalAnalysis {
   asset: string;
   direction: 'CALL' | 'PUT';
   entryTime: number;
+  exitTime: number; // Horário que a vela termina
   entryPrice: number;
   status: 'PENDING' | 'WIN' | 'LOSS' | 'BREAK_EVEN';
   result: 'WIN' | 'LOSS' | null;
   exitPrice?: number;
-  exitTime?: number;
+  candleOpen?: number; // Abertura da vela
+  candleClose?: number; // Fechamento da vela
   profitLoss?: number; // em percentual
   profitLossAmount?: number; // em valor
   confidence: number; // confiança do sinal (0-100)
@@ -38,9 +40,6 @@ export class AISignalAnalyzer {
   private priceHistory: Map<string, RealTimePrice[]> = new Map();
   private analyzedSignals: SignalAnalysis[] = [];
   private readonly STORAGE_KEY = 'ai_signal_analysis';
-  private readonly MAX_ANALYSIS_TIME = 3600000; // 60 minutos
-  private readonly PROFIT_TARGET = 0.015; // 1.5% para ganho
-  private readonly STOP_LOSS = 0.01; // 1% para perda
   private analysisInterval: NodeJS.Timeout | null = null;
   private callbacks: {
     onAnalysisComplete?: (analysis: SignalAnalysis) => void;
@@ -55,6 +54,7 @@ export class AISignalAnalyzer {
   // Registrar novo sinal para análise
   public registerSignal(signal: {
     id: string;
+      exitTime: number;
     asset: string;
     direction: 'CALL' | 'PUT';
     entryPrice: number;
@@ -66,6 +66,7 @@ export class AISignalAnalyzer {
       asset: signal.asset,
       direction: signal.direction,
       entryTime: signal.timestamp,
+        exitTime: signal.exitTime,
       entryPrice: signal.entryPrice,
       status: 'PENDING',
       result: null,
@@ -162,40 +163,8 @@ export class AISignalAnalyzer {
     profitLossAmount: number;
     reason: string;
   } | null {
-    const timeElapsed = currentPrice.timestamp - analysis.entryTime;
-
-    // Se passou o tempo máximo, fecha a posição
-    if (timeElapsed > this.MAX_ANALYSIS_TIME) {
-      const exitPrice = currentPrice.close;
-      const profitLoss = this.calculateProfitLoss(
-        analysis.entryPrice,
-        exitPrice,
-        analysis.direction
-      );
-
-      return {
-        status: profitLoss > 0 ? 'WIN' : profitLoss < 0 ? 'LOSS' : 'BREAK_EVEN',
-        result: profitLoss > 0 ? 'WIN' : 'LOSS',
-        exitPrice,
-        profitLoss,
-        profitLossAmount: this.calculateProfitLossAmount(
-          analysis.entryPrice,
-          exitPrice,
-          analysis.direction
-        ),
-        reason: `Tempo máximo atingido. Lucro/Perda: ${profitLoss.toFixed(2)}%`,
-      };
-    }
-
-    // Análise técnica para determinar resultado
-    const technicalResult = this.analyzeTechnical(analysis, currentPrice);
-
-    if (technicalResult) {
-      return technicalResult;
-    }
-
-    // Se ainda não há decisão, continuar analisando
-    return null;
+    // Apenas chama analyzeTechnical que verifica se a vela terminou
+    return this.analyzeTechnical(analysis, currentPrice);
   }
 
   // Análise técnica para determinar WIN/LOSS
@@ -210,173 +179,67 @@ export class AISignalAnalyzer {
     profitLossAmount: number;
     reason: string;
   } | null {
-    const highestHigh = currentPrice.high;
-    const lowestLow = currentPrice.low;
-    const close = currentPrice.close;
+    // Verificar se a vela já terminou (passou do exitTime)
+    const now = currentPrice.timestamp;
+    if (now < analysis.exitTime) {
+      // Vela ainda não terminou, aguardar
+      return null;
+    }
 
-    // Log para debug
-    const profitLossPercent = this.calculateProfitLoss(analysis.entryPrice, close, analysis.direction);
-    console.log(`🔍 Analisando ${analysis.signalId} (${analysis.direction}):`, {
-      entryPrice: analysis.entryPrice.toFixed(2),
-      currentClose: close.toFixed(2),
-      profitLoss: profitLossPercent.toFixed(2) + '%',
-      targetWin: (this.PROFIT_TARGET * 100).toFixed(1) + '%',
-      targetLoss: (this.STOP_LOSS * 100).toFixed(1) + '%'
+    // Vela terminou! Analisar cor da vela
+    const open = currentPrice.open;
+    const close = currentPrice.close;
+    const isGreenCandle = close > open; // Vela verde (subiu)
+    const isRedCandle = close < open;   // Vela vermelha (caiu)
+
+    console.log(`🕐 Vela terminou! ${analysis.signalId} (${analysis.direction}):`, {
+      asset: analysis.asset,
+      open: open.toFixed(2),
+      close: close.toFixed(2),
+      color: isGreenCandle ? 'VERDE' : isRedCandle ? 'VERMELHA' : 'DOJI',
+      expectedColor: analysis.direction === 'CALL' ? 'VERDE' : 'VERMELHA'
     });
 
-    // Para CALL (aposta em alta)
+    let result: 'WIN' | 'LOSS';
+    let reason: string;
+
+    // CALL = aposta em vela verde
     if (analysis.direction === 'CALL') {
-      // WIN: preço sobe mais que 1.5%
-      if (highestHigh >= analysis.entryPrice * (1 + this.PROFIT_TARGET)) {
-        const profitLoss = this.calculateProfitLoss(
-          analysis.entryPrice,
-          analysis.entryPrice * (1 + this.PROFIT_TARGET),
-          'CALL'
-        );
-        return {
-          status: 'WIN',
-          result: 'WIN',
-          exitPrice: analysis.entryPrice * (1 + this.PROFIT_TARGET),
-          profitLoss,
-          profitLossAmount: profitLoss,
-          reason: `Preço subiu ${(this.PROFIT_TARGET * 100).toFixed(1)}% - META ATINGIDA ✓`,
-        };
+      if (isGreenCandle) {
+        result = 'WIN';
+        reason = `Vela fechou VERDE (${open.toFixed(2)} → ${close.toFixed(2)}) como previsto! ✓`;
+      } else if (isRedCandle) {
+        result = 'LOSS';
+        reason = `Vela fechou VERMELHA (${open.toFixed(2)} → ${close.toFixed(2)}), esperava verde ✗`;
+      } else {
+        result = 'LOSS';
+        reason = `Vela DOJI (sem direção clara) ✗`;
       }
-
-      // LOSS: preço cai 1% ou mantém
-      if (lowestLow <= analysis.entryPrice * (1 - this.STOP_LOSS)) {
-        const profitLoss = this.calculateProfitLoss(
-          analysis.entryPrice,
-          analysis.entryPrice * (1 - this.STOP_LOSS),
-          'CALL'
-        );
-        return {
-          status: 'LOSS',
-          result: 'LOSS',
-          exitPrice: analysis.entryPrice * (1 - this.STOP_LOSS),
-          profitLoss,
-          profitLossAmount: profitLoss,
-          reason: `Stop loss acionado - Preço caiu ${(this.STOP_LOSS * 100).toFixed(1)}% ✗`,
-        };
-      }
-
-      // Análise de velas - se fechar em queda forte em CALL = LOSS
-      const priceHistory = this.priceHistory.get(analysis.asset) || [];
-      if (priceHistory.length > 5) {
-        const recentCandles = priceHistory.slice(-5);
-        const closeLower = recentCandles.filter(c => c.close < c.open).length;
-
-        if (closeLower >= 4) {
-          // 4 ou mais velas vermelhas = sinal de queda
-          const profitLoss = this.calculateProfitLoss(
-            analysis.entryPrice,
-            close,
-            'CALL'
-          );
-          if (profitLoss < -0.005) {
-            return {
-              status: 'LOSS',
-              result: 'LOSS',
-              exitPrice: close,
-              profitLoss,
-              profitLossAmount: profitLoss,
-              reason: `Padrão de 4 velas vermelhas detectado - tendência de queda ✗`,
-            };
-          }
-        }
+    }
+    // PUT = aposta em vela vermelha
+    else {
+      if (isRedCandle) {
+        result = 'WIN';
+        reason = `Vela fechou VERMELHA (${open.toFixed(2)} → ${close.toFixed(2)}) como previsto! ✓`;
+      } else if (isGreenCandle) {
+        result = 'LOSS';
+        reason = `Vela fechou VERDE (${open.toFixed(2)} → ${close.toFixed(2)}), esperava vermelha ✗`;
+      } else {
+        result = 'LOSS';
+        reason = `Vela DOJI (sem direção clara) ✗`;
       }
     }
 
-    // Para PUT (aposta em queda)
-    if (analysis.direction === 'PUT') {
-      // WIN: preço cai mais que 1.5%
-      if (lowestLow <= analysis.entryPrice * (1 - this.PROFIT_TARGET)) {
-        const profitLoss = this.calculateProfitLoss(
-          analysis.entryPrice,
-          analysis.entryPrice * (1 - this.PROFIT_TARGET),
-          'PUT'
-        );
-        return {
-          status: 'WIN',
-          result: 'WIN',
-          exitPrice: analysis.entryPrice * (1 - this.PROFIT_TARGET),
-          profitLoss,
-          profitLossAmount: profitLoss,
-          reason: `Preço caiu ${(this.PROFIT_TARGET * 100).toFixed(1)}% - META ATINGIDA ✓`,
-        };
-      }
+    const profitLoss = ((close - open) / open) * 100;
 
-      // LOSS: preço sobe 1% ou mantém
-      if (highestHigh >= analysis.entryPrice * (1 + this.STOP_LOSS)) {
-        const profitLoss = this.calculateProfitLoss(
-          analysis.entryPrice,
-          analysis.entryPrice * (1 + this.STOP_LOSS),
-          'PUT'
-        );
-        return {
-          status: 'LOSS',
-          result: 'LOSS',
-          exitPrice: analysis.entryPrice * (1 + this.STOP_LOSS),
-          profitLoss,
-          profitLossAmount: profitLoss,
-          reason: `Stop loss acionado - Preço subiu ${(this.STOP_LOSS * 100).toFixed(1)}% ✗`,
-        };
-      }
-
-      // Análise de velas - se fechar em alta forte em PUT = LOSS
-      const priceHistory = this.priceHistory.get(analysis.asset) || [];
-      if (priceHistory.length > 5) {
-        const recentCandles = priceHistory.slice(-5);
-        const closeHigher = recentCandles.filter(c => c.close > c.open).length;
-
-        if (closeHigher >= 4) {
-          // 4 ou mais velas verdes = sinal de alta
-          const profitLoss = this.calculateProfitLoss(
-            analysis.entryPrice,
-            close,
-            'PUT'
-          );
-          if (profitLoss < -0.005) {
-            return {
-              status: 'LOSS',
-              result: 'LOSS',
-              exitPrice: close,
-              profitLoss,
-              profitLossAmount: profitLoss,
-              reason: `Padrão de 4 velas verdes detectado - tendência de alta ✗`,
-            };
-          }
-        }
-      }
-    }
-
-    return null;
-  }
-
-  // Calcular lucro/perda em percentual
-  private calculateProfitLoss(
-    entryPrice: number,
-    exitPrice: number,
-    direction: 'CALL' | 'PUT'
-  ): number {
-    if (direction === 'CALL') {
-      return ((exitPrice - entryPrice) / entryPrice) * 100;
-    } else {
-      return ((entryPrice - exitPrice) / entryPrice) * 100;
-    }
-  }
-
-  // Calcular lucro/perda em valor
-  private calculateProfitLossAmount(
-    entryPrice: number,
-    exitPrice: number,
-    direction: 'CALL' | 'PUT'
-  ): number {
-    if (direction === 'CALL') {
-      return exitPrice - entryPrice;
-    } else {
-      return entryPrice - exitPrice;
-    }
+    return {
+      status: result,
+      result,
+      exitPrice: close,
+      profitLoss,
+      profitLossAmount: close - open,
+      reason
+    };
   }
 
   // Iniciar análise periódica (simulada)

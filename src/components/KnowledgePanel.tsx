@@ -23,6 +23,10 @@ export const KnowledgePanel = memo(function KnowledgePanel() {
   const fetchFromSupabase = async () => {
     try {
       const { supabase } = await import('@/integrations/supabase/client');
+      if (!supabase) {
+        console.warn('Supabase não configurado em KnowledgePanel');
+        return;
+      }
       const supa: any = supabase as any;
       const { data } = await supa.from('ai_insights').select('*').order('created_at', { ascending: false }).limit(100);
       const list: Insight[] = (data || []).map((row: any) => ({ source: row.source, title: row.title, url: row.url || undefined, summary: row.summary, topic: row.topic || undefined }));

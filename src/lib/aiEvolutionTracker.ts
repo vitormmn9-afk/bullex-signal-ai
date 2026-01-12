@@ -37,7 +37,17 @@ export interface OperationLearning {
 }
 
 import { aiLearningSystem } from './aiLearning';
-import { supabase } from '@/integrations/supabase/client';
+
+let supabase: any = null;
+try {
+  import('@/integrations/supabase/client').then((module) => {
+    supabase = module.supabase;
+  }).catch(() => {
+    console.warn("Supabase não configurado em AIEvolutionTracker");
+  });
+} catch {
+  console.warn("Supabase não disponível em AIEvolutionTracker");
+}
 
 class AIEvolutionTracker {
   private metrics: EvolutionMetric[] = [];

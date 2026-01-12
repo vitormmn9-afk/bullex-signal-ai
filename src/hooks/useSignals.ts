@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { performComprehensiveAnalysis } from "@/lib/technicalAnalysis";
 import { aiLearningSystem, type SignalHistory } from "@/lib/aiLearning";
@@ -7,6 +6,18 @@ import { performAdvancedCandleAnalysis } from "@/lib/advancedCandleAnalysis";
 import { soundSystem } from "@/lib/soundSystem";
 import { analytics } from "@/lib/analytics";
 import { aiEvolutionTracker } from "@/lib/aiEvolutionTracker";
+
+// Lazy import Supabase para evitar travamento se não estiver configurado
+let supabase: any = null;
+try {
+  import("@/integrations/supabase/client").then((module) => {
+    supabase = module.supabase;
+  }).catch(() => {
+    console.warn("Supabase não configurado, usando modo offline");
+  });
+} catch {
+  console.warn("Supabase não disponível");
+}
 
 export interface Signal {
   id: string;

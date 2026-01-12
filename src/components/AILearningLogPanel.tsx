@@ -19,6 +19,13 @@ export const AILearningLogPanel = memo(function AILearningLogPanel() {
     } else {
       try {
         const { supabase } = await import('@/integrations/supabase/client');
+        if (!supabase) {
+          console.warn('Supabase não configurado, usando dados locais');
+          const list = aiEvolutionTracker.getOperationLearnings(200);
+          setEntries(list);
+          setSource('local');
+          return;
+        }
         const supa: any = supabase as any;
         let query = supa.from('ai_operation_learnings').select('*').order('timestamp', { ascending: false }).limit(200);
         if (filter !== 'ALL') query = query.eq('result', filter);

@@ -114,8 +114,10 @@ export function useSignals(marketType: "OTC" | "OPEN", autoGenerate: boolean = t
   const [autoRefreshInterval, setAutoRefreshInterval] = useState<number>(30); // 30 segundos - geração mais rápida
   const { toast } = useToast();
   
-  // ✅ REF PARA FUNÇÃO DE GERAÇÃO DE SINAL (necessária para auto-geração)
+  // ✅ REFS PARA CONTROLE DE AUTO-GERAÇÃO E TIMEOUTS
   const generateSignalRef = useRef<(() => Promise<void>) | null>(null);
+  const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const autoRefreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Debug log
   useEffect(() => {

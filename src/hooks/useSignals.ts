@@ -113,6 +113,9 @@ export function useSignals(marketType: "OTC" | "OPEN", autoGenerate: boolean = t
   const [minProbability, setMinProbability] = useState<number>(50); // Reduzido de 85% para 50% para permitir aprendizado adaptativo
   const [autoRefreshInterval, setAutoRefreshInterval] = useState<number>(60); // 60 segundos
   const { toast } = useToast();
+  
+  // ✅ REF PARA FUNÇÃO DE GERAÇÃO DE SINAL (necessária para auto-geração)
+  const generateSignalRef = useRef<(() => Promise<void>) | null>(null);
 
   // Debug log
   useEffect(() => {

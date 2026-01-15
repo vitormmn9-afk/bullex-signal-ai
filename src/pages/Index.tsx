@@ -102,6 +102,34 @@ const Index = () => {
     return () => clearInterval(priceInterval);
   }, []);
 
+  // 🔥 LISTENER PARA NOTIFICAR QUANDO IA ESTIVER PRONTA
+  useEffect(() => {
+    const handleAIReady = (event: CustomEvent) => {
+      const { streak, message } = event.detail;
+      
+      // Tocar som de vitória múltiplas vezes
+      soundSystem.playWin();
+      setTimeout(() => soundSystem.playWin(), 300);
+      setTimeout(() => soundSystem.playWin(), 600);
+      
+      // Notificação grande e destacada
+      toast({
+        title: "🎉🎉🎉 IA PRONTA PARA USO! 🎉🎉🎉",
+        description: `${message}\n\n✅ Sistema otimizado e pronto!\n✅ Pode começar a operar com confiança!`,
+        duration: 15000, // 15 segundos
+      });
+
+      // Notificação extra no console
+      console.log(`%c🚨 ATENÇÃO: ${message}`, 'font-size: 20px; color: #00ff88; font-weight: bold; background: #000; padding: 10px;');
+    };
+
+    window.addEventListener('aiReadyToUse', handleAIReady as EventListener);
+    
+    return () => {
+      window.removeEventListener('aiReadyToUse', handleAIReady as EventListener);
+    };
+  }, [toast]);
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}

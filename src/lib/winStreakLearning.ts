@@ -249,6 +249,11 @@ class WinStreakLearningSystem {
   private achieveTarget(): void {
     console.log(`🎯 TARGET ATINGIDO! ${this.stats.targetStreak} vitórias consecutivas!`);
     
+    // 🔥 DISPARA EVENTO GLOBAL PARA NOTIFICAR O USUÁRIO
+    if (this.stats.targetStreak >= 15) {
+      this.notifyUserReadyToUse();
+    }
+    
     // Registra achievement
     const target = this.stats.targetStreak;
     this.stats.streaksAchieved[target] = (this.stats.streaksAchieved[target] || 0) + 1;
@@ -276,6 +281,28 @@ class WinStreakLearningSystem {
     this.learnFromSuccessfulStreak();
     
     this.saveStats();
+  }
+
+  /**
+   * 🔥 NOTIFICA O USUÁRIO QUE O SISTEMA ESTÁ PRONTO PARA USO
+   */
+  private notifyUserReadyToUse(): void {
+    // Dispara evento customizado
+    const event = new CustomEvent('aiReadyToUse', {
+      detail: {
+        streak: this.stats.currentStreak,
+        longestStreak: this.stats.longestStreak,
+        level: this.stats.progressionLevel,
+        message: `🎉 IA PRONTA! ${this.stats.currentStreak} vitórias consecutivas alcançadas!`
+      }
+    });
+    window.dispatchEvent(event);
+    
+    console.log(`\n🚨🚨🚨 === SISTEMA PRONTO PARA USO! === 🚨🚨🚨`);
+    console.log(`✅ A IA atingiu ${this.stats.currentStreak} vitórias consecutivas!`);
+    console.log(`✅ Nível de confiança: ALTO`);
+    console.log(`✅ Você pode começar a usar os sinais agora!`);
+    console.log(`🚨🚨🚨 ============================= 🚨🚨🚨\n`);
   }
 
   /**

@@ -403,10 +403,15 @@ export function useSignals(marketType: "OTC" | "OPEN", autoGenerate: boolean = t
     if (isGenerating) return null; // Prevent concurrent generations
     
     setIsGenerating(true);
+    console.log(`\n🎰 === GERANDO NOVO SINAL ===`);
+    console.log(`📍 Mercado selecionado: ${marketType}`);
+    
     try {
       // Random asset selection
       const assetsForMarket = ASSETS[marketType];
+      console.log(`📦 Assets disponíveis para ${marketType}:`, assetsForMarket);
       const asset = assetsForMarket[Math.floor(Math.random() * assetsForMarket.length)];
+      console.log(`🎯 Asset escolhido: ${asset}`);
       
       // Simulate price data for analysis
       const mockPrices = Array.from({ length: 50 }, () => 
@@ -828,8 +833,18 @@ export function useSignals(marketType: "OTC" | "OPEN", autoGenerate: boolean = t
 
   // Fetch signals on component mount and market type change
   useEffect(() => {
+    console.log(`🔄 Mercado alterado para: ${marketType}`);
+    console.log(`📦 Assets disponíveis:`, ASSETS[marketType]);
     fetchSignals();
-  }, [marketType]);
+    
+    // Gerar um sinal automaticamente ao trocar de mercado (se auto-geração estiver ativa)
+    if (autoGenerateEnabled && generateSignalRef.current) {
+      console.log(`🎯 Gerando sinal para novo mercado ${marketType}...`);
+      setTimeout(() => {
+        generateSignalRef.current?.();
+      }, 1000);
+    }
+  }, [marketType, autoGenerateEnabled]);
 
   // Check for signals - notify immediately when created (1 minute before entry)
   useEffect(() => {

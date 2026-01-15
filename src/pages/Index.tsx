@@ -67,16 +67,6 @@ const Index = () => {
     .filter((s) => Number(s.probability) >= minProbability)
     .filter((s) => directionFilter === "ALL" || s.direction === directionFilter);
 
-  // Recarregar ao trocar de mercado
-  useEffect(() => {
-    console.log(`🔄 Mercado alterado para: ${marketType}`);
-    // Para auto-geração ao trocar de mercado para não travar
-    setAutoGenerateEnabled(false);
-    setTimeout(() => {
-      setAutoGenerateEnabled(true);
-    }, 1000);
-  }, [marketType]);
-
   // ✅ SIMULAÇÃO DE PREÇOS PARA AUTO-ANÁLISE (otimizado)
   useEffect(() => {
     const assets = [

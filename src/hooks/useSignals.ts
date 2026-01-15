@@ -102,7 +102,12 @@ export function useSignals(marketType: "OTC" | "OPEN", autoGenerate: boolean = t
   const [signals, setSignals] = useState<Signal[]>(() => {
     try {
       const saved = localStorage.getItem(`signals_${marketType}`);
-      return saved ? JSON.parse(saved) : [];
+      const loadedSignals = saved ? JSON.parse(saved) : [];
+      console.log(`📦 Sinais carregados do localStorage para ${marketType}:`, loadedSignals.length);
+      // Filtrar apenas sinais do mercado correto
+      const filteredSignals = loadedSignals.filter((s: Signal) => s.market_type === marketType);
+      console.log(`✅ Sinais após filtro de mercado (${marketType}):`, filteredSignals.length);
+      return filteredSignals;
     } catch {
       return [];
     }
@@ -835,6 +840,12 @@ export function useSignals(marketType: "OTC" | "OPEN", autoGenerate: boolean = t
   useEffect(() => {
     console.log(`🔄 Mercado alterado para: ${marketType}`);
     console.log(`📦 Assets disponíveis:`, ASSETS[marketType]);
+    console.log(`📊 Sinais atuais no state:`, signals.length);
+    console.log(`🎯 Sinais do mercado ${marketType}:`, signals.filter(s => s.market_type === marketType).length);
+    
+    // Limpar sinais de outro mercado
+    setSignals(prev => prev.filter(s => s.market_type === marketType));
+    
     fetchSignals();
     
     // Gerar um sinal automaticamente ao trocar de mercado (se auto-geração estiver ativa)

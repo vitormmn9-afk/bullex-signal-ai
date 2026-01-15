@@ -848,14 +848,23 @@ export function useSignals(marketType: "OTC" | "OPEN", autoGenerate: boolean = t
     
     fetchSignals();
     
-    // Gerar um sinal automaticamente ao trocar de mercado (se auto-geração estiver ativa)
-    if (autoGenerateEnabled && generateSignalRef.current) {
-      console.log(`🎯 Gerando sinal para novo mercado ${marketType}...`);
-      setTimeout(() => {
-        generateSignalRef.current?.();
-      }, 1000);
-    }
-  }, [marketType, autoGenerateEnabled]);
+    // Gerar um sinal IMEDIATAMENTE ao trocar de mercado
+    console.log(`⚡ GERANDO SINAL IMEDIATAMENTE para ${marketType}...`);
+    const immediateGeneration = setTimeout(() => {
+      if (generateSignalRef.current) {
+        console.log(`🎲 Executando geração de sinal para ${marketType}...`);
+        generateSignalRef.current().then(() => {
+          console.log(`✅ Sinal gerado com sucesso para ${marketType}`);
+        }).catch((err) => {
+          console.error(`❌ Erro ao gerar sinal para ${marketType}:`, err);
+        });
+      } else {
+        console.error(`❌ generateSignalRef.current não está definido!`);
+      }
+    }, 500);
+
+    return () => clearTimeout(immediateGeneration);
+  }, [marketType]);
 
   // Check for signals - notify immediately when created (1 minute before entry)
   useEffect(() => {

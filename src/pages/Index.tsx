@@ -102,8 +102,11 @@ const Index = () => {
     .filter((s) => Number(s.probability) >= minProbability)
     .filter((s) => directionFilter === "ALL" || s.direction === directionFilter);
 
-  // ✅ SIMULAÇÃO DE PREÇOS PARA AUTO-ANÁLISE (otimizado)
+  // ✅ SIMULAÇÃO DE PREÇOS PARA AUTO-ANÁLISE (DESATIVADA - causava marcação automática errada)
   useEffect(() => {
+    // COMENTADO: Esta simulação estava fazendo todos os sinais OTC perderem
+    // porque gerava preços aleatórios que não correspondiam à realidade
+    /*
     const assets = [
       "EUR/USD", "GBP/USD", "USD/JPY", "AUD/USD", "USD/CAD",
       "EUR/GBP", "EUR/JPY", "GBP/JPY", "NZD/USD", "USD/CHF",
@@ -135,6 +138,8 @@ const Index = () => {
     console.log('📊 Simulação de preços otimizada iniciada');
 
     return () => clearInterval(priceInterval);
+    */
+    console.log('📊 Simulação de preços DESATIVADA - Sinais não serão marcados automaticamente');
   }, []);
 
   // 🔥 LISTENER PARA NOTIFICAR QUANDO IA ESTIVER PRONTA

@@ -9,9 +9,18 @@ interface AutoGenerateToggleProps {
 }
 
 export function AutoGenerateToggle({ enabled, onToggle, disabled }: AutoGenerateToggleProps) {
+  const handleClick = () => {
+    try {
+      console.log('AutoGenerateToggle clicked, enabled:', enabled);
+      onToggle(!enabled);
+    } catch (error) {
+      console.error('Error in AutoGenerateToggle:', error);
+    }
+  };
+
   return (
     <Button
-      onClick={() => onToggle(!enabled)}
+      onClick={handleClick}
       disabled={disabled}
       className={cn(
         "w-full h-12 text-base font-semibold",

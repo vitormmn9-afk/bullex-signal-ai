@@ -59,6 +59,36 @@ const Index = () => {
   // Dados do streak de vitórias
   const streakStats = useWinStreak();
 
+  // Wrapper seguro para setAutoGenerateEnabled
+  const handleAutoGenerateToggle = (enabled: boolean) => {
+    try {
+      console.log('Toggling auto-generate:', enabled);
+      setAutoGenerateEnabled(enabled);
+    } catch (error) {
+      console.error('Error toggling auto-generate:', error);
+    }
+  };
+
+  // Wrapper seguro para setMinProbability
+  const handleMinProbabilityChange = (value: number) => {
+    try {
+      console.log('Setting min probability:', value);
+      setMinProbability(value);
+    } catch (error) {
+      console.error('Error setting min probability:', error);
+    }
+  };
+
+  // Wrapper seguro para setAutoRefreshInterval
+  const handleAutoRefreshIntervalChange = (value: number) => {
+    try {
+      console.log('Setting auto refresh interval:', value);
+      setAutoRefreshInterval(value);
+    } catch (error) {
+      console.error('Error setting auto refresh interval:', error);
+    }
+  };
+
   // Mock chart data - would come from real performance metrics
   const chartData = [
     { name: "Seg", wins: 8, losses: 2 },
@@ -351,7 +381,7 @@ const Index = () => {
             <span className="text-sm text-muted-foreground">Confiança mínima (Aprendizado Adaptativo)</span>
             <span className="text-sm font-medium">{minProbability}%</span>
           </div>
-          <Slider value={[minProbability]} min={30} max={95} step={5} onValueChange={(v) => setMinProbability(v[0])} />
+          <Slider value={[minProbability]} min={30} max={95} step={5} onValueChange={(v) => handleMinProbabilityChange(v[0])} />
           <p className="text-xs text-muted-foreground">
             ⚠️ A IA agora aprende e adapta probabilidades. Valores baixos (30-50%) permitem mais aprendizado, mas com mais risco.
           </p>
@@ -360,7 +390,7 @@ const Index = () => {
         {/* Auto Generate Toggle */}
         <AutoGenerateToggle 
           enabled={autoGenerateEnabled} 
-          onToggle={setAutoGenerateEnabled}
+          onToggle={handleAutoGenerateToggle}
           disabled={isGenerating}
         />
 
@@ -376,7 +406,7 @@ const Index = () => {
               min={30} 
               max={300} 
               step={10} 
-              onValueChange={(v) => setAutoRefreshInterval(v[0])} 
+              onValueChange={(v) => handleAutoRefreshIntervalChange(v[0])} 
             />
             <p className="text-xs text-muted-foreground">A IA gerará novos sinais automaticamente a cada {autoRefreshInterval} segundos</p>
           </div>

@@ -104,31 +104,31 @@ const Index = () => {
 
   // 🔥 LISTENER PARA NOTIFICAR QUANDO IA ESTIVER PRONTA
   useEffect(() => {
-    const handleAIReady = (event: CustomEvent) => {
-      const { streak, message } = event.detail;
-      
-      // Tocar som de vitória múltiplas vezes
-      soundSystem.playWin();
-      setTimeout(() => soundSystem.playWin(), 300);
-      setTimeout(() => soundSystem.playWin(), 600);
-      
-      // Notificação grande e destacada
-      toast({
-        title: "🎉🎉🎉 IA PRONTA PARA USO! 🎉🎉🎉",
-        description: `${message}\n\n✅ Sistema otimizado e pronto!\n✅ Pode começar a operar com confiança!`,
-        duration: 15000, // 15 segundos
-      });
-
-      // Notificação extra no console
-      console.log(`%c🚨 ATENÇÃO: ${message}`, 'font-size: 20px; color: #00ff88; font-weight: bold; background: #000; padding: 10px;');
+    const handleAIReady = (event: any) => {
+      try {
+        const { streak, message } = event.detail || {};
+        
+        console.log(`%c🚨 ATENÇÃO: ${message}`, 'font-size: 20px; color: #00ff88; font-weight: bold; background: #000; padding: 10px;');
+        
+        // Tocar som de vitória
+        soundSystem.playWin();
+        
+        // Notificação
+        toast({
+          title: "🎉 IA PRONTA PARA USO!",
+          description: `${streak} vitórias consecutivas! Sistema otimizado.`,
+        });
+      } catch (err) {
+        console.error('Erro ao processar evento AI Ready:', err);
+      }
     };
 
-    window.addEventListener('aiReadyToUse', handleAIReady as EventListener);
+    window.addEventListener('aiReadyToUse', handleAIReady);
     
     return () => {
-      window.removeEventListener('aiReadyToUse', handleAIReady as EventListener);
+      window.removeEventListener('aiReadyToUse', handleAIReady);
     };
-  }, [toast]);
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">

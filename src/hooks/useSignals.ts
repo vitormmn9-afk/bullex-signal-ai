@@ -958,7 +958,10 @@ export function useSignals(marketType: "OTC" | "OPEN", autoGenerate: boolean = t
 
   // AUTO-REFRESH: Gera sinais automaticamente em intervalos regulares
   useEffect(() => {
+    console.log(`🔄 AUTO-GERAÇÃO: ${autoGenerateEnabled ? 'ATIVADA' : 'DESATIVADA'} | Intervalo: ${autoRefreshInterval}s`);
+    
     if (!autoGenerateEnabled) {
+      console.log('⏸️ Auto-geração desativada, limpando timeouts...');
       if (autoRefreshTimeoutRef.current) {
         clearTimeout(autoRefreshTimeoutRef.current);
         autoRefreshTimeoutRef.current = null;
@@ -968,24 +971,41 @@ export function useSignals(marketType: "OTC" | "OPEN", autoGenerate: boolean = t
 
     // Armazena referência da função generateSignal
     const scheduleNextGeneration = async () => {
-      if (!autoGenerateEnabled || !generateSignalRef.current) return;
+      if (!autoGenerateEnabled) {
+        console.log('❌ Auto-geração foi desativada, parando ciclo...');
+        return;
+      }
+      
+      if (!generateSignalRef.current) {
+        console.error('❌ generateSignalRef.current está NULL!');
+        return;
+      }
+      
+      console.log(`⏰ Gerando sinal automaticamente... (próximo em ${autoRefreshInterval}s)`);
       
       try {
         await generateSignalRef.current();
+        console.log('✅ Sinal gerado com sucesso!');
       } catch (e) {
-        console.error('Erro ao gerar sinal:', e);
+        console.error('❌ Erro ao gerar sinal:', e);
       }
       
       // Agenda próxima geração
+      console.log(`⏱️ Agendando próxima geração em ${autoRefreshInterval}s...`);
       autoRefreshTimeoutRef.current = setTimeout(() => {
+        console.log(`🔔 Tempo expirado! Gerando próximo sinal...`);
         if (autoGenerateEnabled) {
           scheduleNextGeneration();
+        } else {
+          console.log('⏸️ Auto-geração desativada durante espera');
         }
       }, autoRefreshInterval * 1000);
     };
 
     // Pequeno delay para garantir que ref está pronta, depois gera imediatamente
+    console.log('⏳ Iniciando primeira geração automática em 500ms...');
     const initialDelay = setTimeout(() => {
+      console.log('🚀 Executando primeira geração automática...');
       scheduleNextGeneration();
     }, 500);
 

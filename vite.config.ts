@@ -7,15 +7,10 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "0.0.0.0",
     port: 8080,
-    strictPort: true,
-    hmr: {
-      protocol: 'ws',
-      host: 'localhost',
-      port: 8080,
-      clientPort: 8080,
-    },
+    strictPort: false,
+    hmr: false, // Desabilita HMR para evitar loops de reconexão
     watch: {
-      usePolling: false,
+      usePolling: true,
       interval: 1000,
     },
     cors: true,

@@ -3,6 +3,7 @@ import { useToast } from "@/hooks/use-toast";
 import { performComprehensiveAnalysis } from "@/lib/technicalAnalysis";
 import { aiLearningSystem, type SignalHistory } from "@/lib/aiLearning";
 import { performAdvancedCandleAnalysis } from "@/lib/advancedCandleAnalysis";
+import { advancedCandleAnalyzer, type CandleData } from "@/lib/advancedCandlePatternAnalyzer";
 import { soundSystem } from "@/lib/soundSystem";
 import { analytics } from "@/lib/analytics";
 import { aiEvolutionTracker } from "@/lib/aiEvolutionTracker";
@@ -109,7 +110,7 @@ export function useSignals(marketType: "OTC" | "OPEN", autoGenerate: boolean = t
   const [isLoading, setIsLoading] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [autoGenerateEnabled, setAutoGenerateEnabled] = useState(autoGenerate);
-  const [minProbability, setMinProbability] = useState<number>(85);
+  const [minProbability, setMinProbability] = useState<number>(50); // Reduzido de 85% para 50% para permitir aprendizado adaptativo
   const [autoRefreshInterval, setAutoRefreshInterval] = useState<number>(60); // 60 segundos
   const { toast } = useToast();
 
@@ -118,9 +119,60 @@ export function useSignals(marketType: "OTC" | "OPEN", autoGenerate: boolean = t
     console.log('🤖 Auto-geração:', autoGenerateEnabled ? 'ATIVA' : 'INATIVA', '| Intervalo:', autoRefreshInterval + 's');
   }, [autoGenerateEnabled, autoRefreshInterval]);
 
-  const autoRefreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const generateSignalRef = useRef<(() => Promise<Signal | null>) | null>(null);
+  // ✅ LISTENER PARA ANÁLISE AUTOMÁTICA DE SINAIS
+  useEffect(() => {
+    // Quando um sinal é analisado e marcado como WIN/LOSS, registrar aprendizado automático
+    const handleSignalWin = (analysis: any) => {
+      const signalId = analysis.signalId;
+      console.log(`🎉 SINAL GANHOU AUTOMATICAMENTE: ${signalId}`, analysis);
+      
+      // Atualizar estado local
+      setSignals(prev =>
+        prev.map(s =>
+          s.id === signalId ? { ...s, result: 'WIN', executed_at: new Date().toISOString() } : s
+        )
+      );
+      
+      // Registrar no sistema de aprendizado IMEDIATAMENTE
+      recordAutomaticLearning('WIN', analysis);
+      
+      soundSystem.playWin();
+      toast({
+        title: "✅ Vitória Registrada!",
+        description: `${analysis.asset} ${analysis.direction} - Ganhou automaticamente`,
+      });
+    };
+
+    const handleSignalLoss = (analysis: any) => {
+      const signalId = analysis.signalId;
+      console.log(`❌ SINAL PERDEU AUTOMATICAMENTE: ${signalId}`, analysis);
+      
+      // Atualizar estado local
+      setSignals(prev =>
+        prev.map(s =>
+          s.id === signalId ? { ...s, result: 'LOSS', executed_at: new Date().toISOString() } : s
+        )
+      );
+      
+      // Registrar no sistema de aprendizado IMEDIATAMENTE
+      recordAutomaticLearning('LOSS', analysis);
+      
+      soundSystem.playLoss();
+      toast({
+        title: "❌ Derrota Registrada!",
+        description: `${analysis.asset} ${analysis.direction} - Perdeu automaticamente`,
+        variant: "destructive",
+      });
+    };
+
+    // Registrar listeners no analisador
+    aiSignalAnalyzer.onWin(handleSignalWin);
+    aiSignalAnalyzer.onLoss(handleSignalLoss);
+
+    return () => {
+      // Cleanup (optional - o analyzer mantém referências, então não precisa desregistrar)
+    };
+  }, []);
 
   // ✅ FUNÇÃO DE APRENDIZADO AUTOMÁTICO
   const recordAutomaticLearning = useCallback((result: 'WIN' | 'LOSS', analysis: any) => {
@@ -347,10 +399,38 @@ export function useSignals(marketType: "OTC" | "OPEN", autoGenerate: boolean = t
     
     setIsGenerating(true);
     try {
+      // Random asset selection
+      const assetsForMarket = ASSETS[marketType];
+      const asset = assetsForMarket[Math.floor(Math.random() * assetsForMarket.length)];
+      
       // Simulate price data for analysis
       const mockPrices = Array.from({ length: 50 }, () => 
         100 + (Math.random() - 0.5) * 10
       );
+      
+      // 🔥 GERAR DADOS DE VELAS PARA ANÁLISE AVANÇADA
+      const candleData: CandleData = {
+        open: mockPrices[mockPrices.length - 2],
+        high: Math.max(...mockPrices.slice(-5)),
+        low: Math.min(...mockPrices.slice(-5)),
+        close: mockPrices[mockPrices.length - 1],
+        volume: Math.floor(Math.random() * 1000000),
+        timestamp: Date.now(),
+      };
+      
+      // 🎯 ANÁLISE AVANÇADA DE PADRÕES DE VELAS
+      const advancedAnalysis = advancedCandleAnalyzer.analyzeCandle(asset, candleData);
+      
+      console.log('\n🔬 === ANÁLISE AVANÇADA DE VELAS ===');
+      console.log(`📊 Asset: ${asset}`);
+      console.log(`🎨 Cor: ${advancedAnalysis.colorPattern.color} | Intensidade: ${advancedAnalysis.colorPattern.intensity.toFixed(0)}%`);
+      console.log(`📐 Sequência: ${advancedAnalysis.colorPattern.sequence}`);
+      console.log(`🎲 Quadrantes: O:${advancedAnalysis.quadrantAnalysis.openQuadrant} C:${advancedAnalysis.quadrantAnalysis.closeQuadrant} | Posição: ${advancedAnalysis.quadrantAnalysis.bodyPosition}`);
+      console.log(`🎯 PREVISÃO: ${advancedAnalysis.prediction.predictedDirection} (${advancedAnalysis.prediction.confidence.toFixed(1)}%)`);
+      console.log(`📈 Precisão Histórica: ${advancedAnalysis.prediction.historicalAccuracy.toFixed(1)}%`);
+      console.log(`💡 Razões:`, advancedAnalysis.prediction.reasoning);
+      console.log(`🏷️  Padrões: ${advancedAnalysis.prediction.basedOnPatterns.join(', ')}`);
+      console.log(`⚡ Score Final: ${advancedAnalysis.score.toFixed(1)}/100`);
       
       // Perform comprehensive technical analysis
       const analysis = performComprehensiveAnalysis(mockPrices);
@@ -370,53 +450,117 @@ export function useSignals(marketType: "OTC" | "OPEN", autoGenerate: boolean = t
         bestIndicators
       );
 
-      // ✅ APLICAR PENALIZAÇÕES/BÔNUS BASEADOS NO APRENDIZADO
+      // 🔥 INTEGRAR ANÁLISE AVANÇADA DE VELAS NA PROBABILIDADE
+      // Usa a previsão do analisador avançado como fator adicional
+      console.log('\n🎯 === INTEGRANDO ANÁLISE AVANÇADA ===');
+      
+      // Ajusta probabilidade baseado na confiança da previsão
+      const predictionBonus = (advancedAnalysis.prediction.confidence - 50) * 0.3; // 30% do peso
+      const historicalBonus = (advancedAnalysis.prediction.historicalAccuracy - 50) * 0.2; // 20% do peso
+      const scoreBonus = (advancedAnalysis.score - 50) * 0.25; // 25% do peso
+      
+      console.log(`📈 Bonus de Previsão: ${predictionBonus > 0 ? '+' : ''}${predictionBonus.toFixed(1)}`);
+      console.log(`📊 Bonus Histórico: ${historicalBonus > 0 ? '+' : ''}${historicalBonus.toFixed(1)}`);
+      console.log(`⚡ Bonus de Score: ${scoreBonus > 0 ? '+' : ''}${scoreBonus.toFixed(1)}`);
+      
+      adaptiveProbability += predictionBonus + historicalBonus + scoreBonus;
+      
+      // Bonus adicional se múltiplos padrões concordam
+      if (advancedAnalysis.prediction.basedOnPatterns.length >= 3) {
+        adaptiveProbability += 5;
+        console.log(`🎁 Bonus por ${advancedAnalysis.prediction.basedOnPatterns.length} padrões: +5`);
+      }
+      
+      // Determina direção baseada na previsão avançada
+      const predictedDirection: "CALL" | "PUT" = 
+        advancedAnalysis.prediction.predictedDirection === 'UP' ? "CALL" : "PUT";
+      
+      console.log(`🎲 Direção Prevista: ${predictedDirection} (baseado em análise avançada)`);
+      console.log(`✨ Probabilidade após análise avançada: ${adaptiveProbability.toFixed(1)}%`);
+      console.log('='.repeat(50));
+
+      // ✅ APLICAR PENALIZAÇÕES/BÔNUS BASEADOS NO APRENDIZADO - MUITO MAIS AGRESSIVO AGORA
       const operationalConfig = aiLearningSystem.getOperationalConfig();
       const patternRates = aiLearningSystem.getLearningState().patternSuccessRates;
       
-      // Se o padrão tem histórico, ajustar probabilidade
+      // Se o padrão tem histórico, ajustar probabilidade COM MUITO MAIS FORÇA
       if (patternRates[candlePatternName]) {
         const patternSuccessRate = patternRates[candlePatternName];
-        if (patternSuccessRate < 40) {
-          adaptiveProbability -= 15; // Penalizar padrões fracos
-          console.log(`⚠️ Padrão ${candlePatternName} historicamente fraco (${patternSuccessRate.toFixed(1)}%) - Reduzindo probabilidade`);
-        } else if (patternSuccessRate > 70) {
-          adaptiveProbability += 10; // Bonificar padrões fortes
-          console.log(`✅ Padrão ${candlePatternName} historicamente forte (${patternSuccessRate.toFixed(1)}%) - Aumentando probabilidade`);
+        if (patternSuccessRate < 35) {
+          // Padrão MUITO fraco = REJEITAR DRASTICAMENTE
+          adaptiveProbability -= 45;
+          console.log(`🔴 PADRÃO MUITO FRACO: ${candlePatternName} (${patternSuccessRate.toFixed(1)}%) - REJEITANDO!`);
+        } else if (patternSuccessRate < 45) {
+          // Padrão fraco = Penalizar bastante
+          adaptiveProbability -= 30;
+          console.log(`⚠️ Padrão fraco: ${candlePatternName} (${patternSuccessRate.toFixed(1)}%) - Penalização forte`);
+        } else if (patternSuccessRate > 75) {
+          // Padrão MUITO forte = BOOST FORTE
+          adaptiveProbability += 25;
+          console.log(`✅ PADRÃO MUITO FORTE: ${candlePatternName} (${patternSuccessRate.toFixed(1)}%) - BOOST MÁXIMO!`);
+        } else if (patternSuccessRate > 65) {
+          // Padrão bom = boost moderado
+          adaptiveProbability += 15;
+          console.log(`✅ Padrão bom: ${candlePatternName} (${patternSuccessRate.toFixed(1)}%) - Boost moderado`);
         }
       }
 
-      // Verificar requisitos mínimos aprendidos
+      // Verificar requisitos mínimos aprendidos - MUITO MAIS RIGOROSO
       if (analysis.trendStrength < operationalConfig.minTrendStrength) {
-        adaptiveProbability -= 10;
-        console.log(`⚠️ Trend Strength ${analysis.trendStrength.toFixed(1)} abaixo do mínimo ${operationalConfig.minTrendStrength} - Penalizado`);
+        adaptiveProbability -= 25; // Aumentado de 10 para 25
+        console.log(`🔴 Trend Strength ${analysis.trendStrength.toFixed(1)} abaixo do mínimo ${operationalConfig.minTrendStrength} - PENALIZAÇÃO SEVERA`);
       }
       
       if (analysis.supportResistance < operationalConfig.minSupportResistance) {
-        adaptiveProbability -= 10;
-        console.log(`⚠️ S/R ${analysis.supportResistance.toFixed(1)} abaixo do mínimo ${operationalConfig.minSupportResistance} - Penalizado`);
+        adaptiveProbability -= 25; // Aumentado de 10 para 25
+        console.log(`🔴 S/R ${analysis.supportResistance.toFixed(1)} abaixo do mínimo ${operationalConfig.minSupportResistance} - PENALIZAÇÃO SEVERA`);
       }
 
-      // Aplicar taxa de acerto histórica
+      // Aplicar taxa de acerto histórica COM MUITO MAIS PESO
       const winRate = learningState.winRate;
       if (winRate > 0) {
-        if (winRate < 50) {
-          adaptiveProbability -= 15; // Se está perdendo muito, ser mais conservador
-          console.log(`📉 Win Rate baixo (${winRate.toFixed(1)}%) - Sendo mais conservador`);
+        if (winRate < 30) {
+          // CRÍTICO - perdendo MUITO
+          adaptiveProbability -= 40;
+          console.log(`🚨 CRÍTICO: Win Rate ${winRate.toFixed(1)}% - Sendo MUITO conservador`);
+        } else if (winRate < 40) {
+          // Muito ruim
+          adaptiveProbability -= 30;
+          console.log(`🔴 Win Rate muito baixo (${winRate.toFixed(1)}%) - Penalização severa`);
+        } else if (winRate < 50) {
+          // Ruim
+          adaptiveProbability -= 20;
+          console.log(`⚠️ Win Rate baixo (${winRate.toFixed(1)}%) - Sendo conservador`);
+        } else if (winRate > 80) {
+          // Excelente!
+          adaptiveProbability += 15;
+          console.log(`🚀 Win Rate excelente (${winRate.toFixed(1)}%) - Confiança máxima!`);
         } else if (winRate > 70) {
-          adaptiveProbability += 5; // Se está acertando muito, pode ser mais agressivo
+          // Muito bom
+          adaptiveProbability += 10;
           console.log(`📈 Win Rate alto (${winRate.toFixed(1)}%) - Confiança aumentada`);
+        } else if (winRate > 60) {
+          // Bom
+          adaptiveProbability += 5;
+          console.log(`📈 Win Rate positivo (${winRate.toFixed(1)}%) - Ligeira confiança`);
         }
       }
 
-      // REMOVER LIMITE MÍNIMO FIXO - Deixar a IA decidir
-      // Apenas garantir que não fique negativo ou acima de 100
-      adaptiveProbability = Math.min(98, Math.max(50, Math.round(adaptiveProbability)));
+      // 🎯 LIMITE MÍNIMO MUITO MAIS ALTO AGORA - A IA PRECISA APRENDER A SER SELETIVA
+      // Se está perdendo, ainda mais seletivo
+      const minThreshold = winRate < 50 ? 65 : 58; // Muito mais rigoroso quando perdendo
+      adaptiveProbability = Math.min(98, Math.max(minThreshold, Math.round(adaptiveProbability)));
 
-      console.log('🎲 Probabilidade final após aprendizado:', adaptiveProbability.toFixed(1) + '%', '| Filtro mínimo:', minProbability + '%');
+      console.log('🎲 Probabilidade final após aprendizado:', adaptiveProbability.toFixed(1) + '%', '| Filtro mínimo:', minProbability + '%', '| Min threshold:', minThreshold);
 
       // Check contra filtro do usuário
       if (adaptiveProbability < minProbability) {
+        console.log('❌❌❌ SINAL REJEITADO ❌❌❌');
+        console.log('   Probabilidade calculada:', adaptiveProbability.toFixed(1) + '%');
+        console.log('   Filtro mínimo configurado:', minProbability + '%');
+        console.log('   Threshold mínimo da IA:', minThreshold + '%');
+        console.log('   Para ver sinais, a IA precisa melhorar ou reduza o filtro mínimo na interface');
+        
         // If auto mode is enabled, schedule a retry; otherwise inform user
         if (autoGenerateEnabled) {
           // Try again shortly without flooding (only one pending retry)
@@ -432,33 +576,41 @@ export function useSignals(marketType: "OTC" | "OPEN", autoGenerate: boolean = t
             description: `Probabilidade gerada: ${adaptiveProbability.toFixed(1)}%. Reduza o filtro mínimo para ver mais sinais.`,
           });
         }
-        console.log('⚠️ Sinal rejeitado - Probabilidade:', adaptiveProbability.toFixed(1) + '%', '< Mínimo:', minProbability + '%');
         return null;
       }
       
-      // Determine direction based on analysis
-      const direction: "CALL" | "PUT" = 
-        analysis.priceAction > 60 && analysis.rsi < 70 ? "CALL" : "PUT";
+      console.log('✅✅✅ SINAL APROVADO ✅✅✅');
+      console.log('   Probabilidade:', adaptiveProbability.toFixed(1) + '%');
+      console.log('   Padrão:', candlePatternName);
+      console.log('   Direção:', predictedDirection);
+      console.log('   Baseado em:', advancedAnalysis.prediction.basedOnPatterns.join(', '));
       
       const { entryISO, exitISO, entryLabel, exitLabel } = computeEntryExitTimes();
       
       const signalId = `mock-${Date.now()}`;
       const mockNewSignal: Signal = {
         id: signalId,
-        asset: ASSETS[marketType][Math.floor(Math.random() * ASSETS[marketType].length)],
-        direction: direction,
+        asset: asset, // Usa o asset selecionado
+        direction: predictedDirection, // Usa a direção prevista
         probability: adaptiveProbability,
         market_type: marketType,
         expiration_time: 60, // Always 60 seconds (1 minute candle)
-        indicators_used: bestIndicators,
-        ai_reasoning: generateAIReasoning(analysis, learningState),
+        indicators_used: [...bestIndicators, 'Quadrant Analysis', 'Color Patterns'],
+        ai_reasoning: `${generateAIReasoning(analysis, learningState)} | ${advancedAnalysis.prediction.reasoning[0] || 'Análise avançada'}`,
         result: "PENDING",
         created_at: new Date().toISOString(),
         executed_at: null,
         entry_time: entryISO,
         exit_time: exitISO,
-        analysisMetrics: analysis,
-        candlePattern: candlePatternName,
+        analysisMetrics: {
+          ...analysis,
+          // Adiciona métricas avançadas
+          advancedScore: advancedAnalysis.score,
+          predictionConfidence: advancedAnalysis.prediction.confidence,
+          colorSequence: advancedAnalysis.colorPattern.sequence,
+          quadrants: `${advancedAnalysis.quadrantAnalysis.openQuadrant}→${advancedAnalysis.quadrantAnalysis.closeQuadrant}`,
+        },
+        candlePattern: `${candlePatternName} | ${advancedAnalysis.colorPattern.sequence}`,
       };
 
       setSignals((prev) => [mockNewSignal, ...prev]);
@@ -551,10 +703,29 @@ export function useSignals(marketType: "OTC" | "OPEN", autoGenerate: boolean = t
         aiLearningSystem.updateSignalResult(signalId, result);
         const learningState = aiLearningSystem.getLearningState();
 
+        // 🔥 REGISTRAR RESULTADO NO ANALISADOR AVANÇADO
+        const currentSignal = signals.find(s => s.id === signalId);
+        if (currentSignal && currentSignal.analysisMetrics) {
+          const candleData: CandleData = {
+            open: 100,
+            high: 102,
+            low: 98,
+            close: result === 'WIN' ? 
+              (currentSignal.direction === 'CALL' ? 101 : 99) :
+              (currentSignal.direction === 'CALL' ? 99 : 101),
+            volume: Math.floor(Math.random() * 1000000),
+            timestamp: Date.now(),
+          };
+          
+          // Registra no analisador avançado para aprender com o resultado
+          advancedCandleAnalyzer.analyzeCandle(currentSignal.asset, candleData, result);
+          
+          console.log(`🎯 Resultado registrado no analisador avançado: ${result}`);
+        }
+
         // Construir aprendizado por operação
         const history = aiLearningSystem.getHistory();
         const histSignal = history.find(h => h.id === signalId);
-        const currentSignal = signals.find(s => s.id === signalId);
         if (histSignal && currentSignal) {
           const m: any = histSignal.analysisMetrics || {};
           const indicators = (currentSignal.indicators_used || []).filter(Boolean) as string[];

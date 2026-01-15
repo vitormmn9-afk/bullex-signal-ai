@@ -28,9 +28,11 @@ import AIControlDashboard from "@/components/AIControlDashboard";
 import { aiSignalAnalyzer } from "@/lib/aiSignalAnalyzer";
 import AutoAnalysisTestNew from "@/components/AutoAnalysisTestNew";
 import { ContinuousLearningPanel } from "@/components/ContinuousLearningPanel";
+import { SignalGenerationMonitor } from "@/components/SignalGenerationMonitor";
 import { AutomaticLearningTest } from "@/components/AutomaticLearningTest";
 import { RealTimeLearningMonitor } from "@/components/RealTimeLearningMonitor";
 import { AdaptiveStrategyPanel } from "@/components/AdaptiveStrategyPanel";
+import { WinStreakMonitor } from "@/components/WinStreakMonitor";
 
 const Index = () => {
   const [marketType, setMarketType] = useState<"OTC" | "OPEN">("OPEN");
@@ -220,6 +222,9 @@ const Index = () => {
           />
         </div>
 
+        {/* Signal Generation Monitor */}
+        <SignalGenerationMonitor />
+
         {/* Performance Chart */}
         <Suspense fallback={<div className="h-64 bg-card/50 rounded-lg animate-pulse" />}>
           <PerformanceChart data={chartData} />
@@ -277,6 +282,9 @@ const Index = () => {
         {/* Adaptive Strategy Panel */}
         <AdaptiveStrategyPanel />
 
+        {/* Win Streak Monitor */}
+        <WinStreakMonitor />
+
         {/* Real Time Learning Monitor */}
         <RealTimeLearningMonitor />
 
@@ -297,10 +305,13 @@ const Index = () => {
         {/* Confidence Threshold */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Confiança mínima</span>
+            <span className="text-sm text-muted-foreground">Confiança mínima (Aprendizado Adaptativo)</span>
             <span className="text-sm font-medium">{minProbability}%</span>
           </div>
-          <Slider value={[minProbability]} min={80} max={100} step={1} onValueChange={(v) => setMinProbability(v[0])} />
+          <Slider value={[minProbability]} min={30} max={95} step={5} onValueChange={(v) => setMinProbability(v[0])} />
+          <p className="text-xs text-muted-foreground">
+            ⚠️ A IA agora aprende e adapta probabilidades. Valores baixos (30-50%) permitem mais aprendizado, mas com mais risco.
+          </p>
         </div>
 
         {/* Auto Generate Toggle */}

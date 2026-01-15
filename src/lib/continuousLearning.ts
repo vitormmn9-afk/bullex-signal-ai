@@ -5,6 +5,7 @@
 
 import { aiLearningSystem, type SignalHistory } from './aiLearning';
 import { aiEvolutionTracker } from './aiEvolutionTracker';
+import { winStreakLearning } from './winStreakLearning';
 
 export interface ContinuousLearningConfig {
   enabled: boolean;
@@ -83,6 +84,9 @@ class ContinuousLearningSystem {
     // Análise de indicadores
     this.analyzeIndicators(newOperations);
     
+    // 🔥 OTIMIZAR PARA WIN STREAKS
+    this.optimizeForWinStreaks(completedOps);
+    
     // Ajuste adaptativo de thresholds
     if (this.config.adaptiveThreshold) {
       this.adjustThresholds(completedOps);
@@ -118,7 +122,7 @@ class ContinuousLearningSystem {
   }
 
   /**
-   * Analisa padrões de candles e seus resultados
+   * Analisa padrões de candles e seus resultados - MUITO MAIS AGRESSIVO
    */
   private analyzePatterns(operations: SignalHistory[]) {
     const patternResults: Record<string, { wins: number; total: number }> = {};
@@ -137,27 +141,44 @@ class ContinuousLearningSystem {
     // Identificar padrões com alta taxa de sucesso
     const successfulPatterns: string[] = [];
     const weakPatterns: string[] = [];
+    const criticallyWeakPatterns: string[] = [];
 
     Object.entries(patternResults).forEach(([pattern, stats]) => {
       const winRate = (stats.wins / stats.total) * 100;
-      if (winRate >= 70 && stats.total >= 3) {
+      
+      // 🔥 MUITO MAIS AGRESSIVO - Identificar com menos dados
+      if (winRate >= 65 && stats.total >= 2) {
+        // Padrão bom = reforçar
         successfulPatterns.push(pattern);
-        console.log(`✅ Padrão forte identificado: ${pattern} (${winRate.toFixed(1)}% em ${stats.total} ops)`);
-      } else if (winRate < 40 && stats.total >= 3) {
+        console.log(`✅ PADRÃO BOM: ${pattern} (${winRate.toFixed(1)}% em ${stats.total} ops)`);
+      } else if (winRate < 30 && stats.total >= 2) {
+        // Padrão MUITO FRACO = BLOQUEAR AGRESSIVAMENTE
+        criticallyWeakPatterns.push(pattern);
+        console.log(`🚫 PADRÃO CRÍTICO: ${pattern} (${winRate.toFixed(1)}% em ${stats.total} ops) - SERÁ BLOQUEADO!`);
+      } else if (winRate < 45 && stats.total >= 3) {
+        // Padrão fraco = penalizar
         weakPatterns.push(pattern);
-        console.log(`⚠️ Padrão fraco identificado: ${pattern} (${winRate.toFixed(1)}% em ${stats.total} ops)`);
+        console.log(`⚠️ PADRÃO FRACO: ${pattern} (${winRate.toFixed(1)}% em ${stats.total} ops)`);
       }
     });
 
-    // Aplicar aprendizado ao sistema
-    if (successfulPatterns.length > 0 || weakPatterns.length > 0) {
+    // Aplicar aprendizado ao sistema COM MUITO MAIS FORÇA
+    if (successfulPatterns.length > 0 || weakPatterns.length > 0 || criticallyWeakPatterns.length > 0) {
       console.log('🎯 Aplicando ajustes de padrões ao sistema...');
-      // O sistema de AI Learning já gerencia isso, mas vamos reforçar
+      
+      // Reforçar padrões vencedores COM MUITO MAIS FORÇA
       successfulPatterns.forEach(pattern => {
-        aiLearningSystem.reinforcePattern(pattern, 1.15); // 15% boost
+        aiLearningSystem.reinforcePattern(pattern, 1.35); // Aumentado para 35% boost
       });
+      
+      // Penalizar padrões fracos COM MUITO MAIS FORÇA
       weakPatterns.forEach(pattern => {
-        aiLearningSystem.penalizePattern(pattern, 0.85); // 15% penalty
+        aiLearningSystem.penalizePattern(pattern, 0.60); // Aumentado para 40% penalty
+      });
+      
+      // BLOQUEAR PADRÕES CRÍTICOS IMEDIATAMENTE
+      criticallyWeakPatterns.forEach(pattern => {
+        aiLearningSystem.penalizePattern(pattern, 0.40); // PENALIZAÇÃO SEVERA
       });
     }
   }
@@ -215,9 +236,9 @@ class ContinuousLearningSystem {
    * Ajusta thresholds dinamicamente baseado em performance
    */
   private adjustThresholds(allOperations: SignalHistory[]) {
-    if (allOperations.length < 10) return; // Precisa de dados suficientes
+    if (allOperations.length < 5) return; // Menos restritivo para aprender mais rápido
 
-    const recent = allOperations.slice(-20); // Últimas 20 operações
+    const recent = allOperations.slice(-15); // Últimas 15 operações
     const wins = recent.filter(op => op.result === 'WIN').length;
     const winRate = (wins / recent.length) * 100;
 
@@ -225,27 +246,44 @@ class ContinuousLearningSystem {
     let adjusted = false;
 
     // 🔥 AJUSTE AGRESSIVO SE ESTÁ PERDENDO MUITO
-    if (winRate < 40) {
-      config.minTrendStrength = Math.min(config.minTrendStrength + 10, 80);
-      config.minSupportResistance = Math.min(config.minSupportResistance + 10, 85);
-      config.requireConfirmations = Math.min(config.requireConfirmations + 1, 3);
+    if (winRate < 30) {
+      // EMERGÊNCIA - Taxa de perda crítica!
+      config.minTrendStrength = Math.min(config.minTrendStrength + 15, 90);
+      config.minSupportResistance = Math.min(config.minSupportResistance + 15, 90);
+      config.requireConfirmations = Math.min(config.requireConfirmations + 2, 4);
+      adjusted = true;
+      console.log('🚨 CRÍTICO: Win Rate EXTREMAMENTE baixo:', winRate.toFixed(1) + '% - BLOQUEANDO sinais fracos!');
+    }
+    else if (winRate < 40) {
+      // Muito ruim - precisamos parar de perder
+      config.minTrendStrength = Math.min(config.minTrendStrength + 12, 85);
+      config.minSupportResistance = Math.min(config.minSupportResistance + 12, 85);
+      config.requireConfirmations = Math.min(config.requireConfirmations + 1, 4);
       adjusted = true;
       console.log('🔴 ALERTA: Win Rate MUITO baixo:', winRate.toFixed(1) + '% - Aumentando thresholds AGRESSIVAMENTE');
     }
-    // Se taxa de acerto está baixa, aumentar requisitos
+    // Se taxa de acerto está baixa, aumentar requisitos MAIS
     else if (winRate < 50) {
-      config.minTrendStrength = Math.min(config.minTrendStrength + 5, 70);
-      config.minSupportResistance = Math.min(config.minSupportResistance + 5, 80);
+      config.minTrendStrength = Math.min(config.minTrendStrength + 8, 75);
+      config.minSupportResistance = Math.min(config.minSupportResistance + 8, 80);
       config.requireConfirmations = Math.min(config.requireConfirmations + 1, 3);
       adjusted = true;
-      console.log('⬆️ Aumentando thresholds - WinRate baixo:', winRate.toFixed(1) + '%');
+      console.log('⬆️ Aumentando thresholds agressivamente - WinRate baixo:', winRate.toFixed(1) + '%');
     }
-    // Se taxa de acerto está muito alta, podemos relaxar um pouco
-    else if (winRate > 75 && config.minTrendStrength > 35) {
-      config.minTrendStrength = Math.max(config.minTrendStrength - 3, 35);
-      config.minSupportResistance = Math.max(config.minSupportResistance - 3, 45);
+    // Se taxa de acerto está RAZOÁVEL (50-65%), manter mais seletivo
+    else if (winRate >= 50 && winRate <= 65) {
+      // Manter configurações atuais ou aumentar ligeiramente
+      if (config.minTrendStrength < 50) {
+        config.minTrendStrength = Math.min(config.minTrendStrength + 3, 60);
+        adjusted = true;
+      }
+    }
+    // Se taxa de acerto está muito alta, podemos relaxar UM POUCO
+    else if (winRate > 70 && config.minTrendStrength > 40) {
+      config.minTrendStrength = Math.max(config.minTrendStrength - 2, 40);
+      config.minSupportResistance = Math.max(config.minSupportResistance - 2, 45);
       adjusted = true;
-      console.log('⬇️ Relaxando thresholds - WinRate alto:', winRate.toFixed(1) + '%');
+      console.log('⬇️ Relaxando thresholds ligeiramente - WinRate excelente:', winRate.toFixed(1) + '%');
     }
 
     if (adjusted) {
@@ -254,6 +292,7 @@ class ContinuousLearningSystem {
         minTrendStrength: config.minTrendStrength,
         minSupportResistance: config.minSupportResistance,
         requireConfirmations: config.requireConfirmations,
+        recentWinRate: winRate.toFixed(1) + '%'
       });
     }
   }
@@ -358,6 +397,95 @@ class ContinuousLearningSystem {
     });
 
     aiLearningSystem.updateOperationalConfig(config);
+  }
+
+  /**
+   * 🔥 Otimiza configurações para maximizar win streaks
+   */
+  private optimizeForWinStreaks(allOperations: SignalHistory[]) {
+    const streakStats = winStreakLearning.getStats();
+    
+    console.log(`\n🔥 === OTIMIZAÇÃO PARA WIN STREAKS ===`);
+    console.log(`   Current Streak: ${streakStats.currentStreak}`);
+    console.log(`   Longest Streak: ${streakStats.longestStreak}`);
+    console.log(`   Target: ${streakStats.targetStreak}`);
+    console.log(`   Progression Level: ${streakStats.progressionLevel}`);
+
+    // Se temos histórico de streaks bem sucedidas, aprender com elas
+    if (streakStats.streakHistory.length > 0) {
+      // Pegar as streaks mais longas (top 3)
+      const topStreaks = [...streakStats.streakHistory]
+        .sort((a, b) => b.streak - a.streak)
+        .slice(0, 3);
+
+      console.log(`\n📚 Aprendendo com as ${topStreaks.length} melhores streaks:`);
+
+      // Analisar padrões que funcionaram nas melhores streaks
+      const successPatterns: Record<string, number> = {};
+      const successAssets: Record<string, number> = {};
+      let totalAvgProbability = 0;
+
+      topStreaks.forEach((record, idx) => {
+        console.log(`   #${idx + 1}: ${record.streak} vitórias (prob média: ${record.averageProbability.toFixed(1)}%)`);
+        
+        // Contar padrões
+        record.patterns.forEach(p => {
+          successPatterns[p] = (successPatterns[p] || 0) + 1;
+        });
+        
+        // Contar assets
+        record.assets.forEach(a => {
+          successAssets[a] = (successAssets[a] || 0) + 1;
+        });
+        
+        totalAvgProbability += record.averageProbability;
+      });
+
+      // Calcular probabilidade mínima ideal
+      const idealMinProbability = totalAvgProbability / topStreaks.length;
+      console.log(`\n🎯 Probabilidade mínima ideal: ${idealMinProbability.toFixed(1)}%`);
+
+      // Reforçar padrões que aparecem em streaks bem sucedidas
+      console.log('\n✅ Reforçando padrões de sucesso:');
+      Object.entries(successPatterns)
+        .sort((a, b) => b[1] - a[1])
+        .forEach(([pattern, count]) => {
+          if (count >= 2) { // Apareceu em pelo menos 2 das top streaks
+            console.log(`   - ${pattern}: ${count} vezes`);
+            aiLearningSystem.reinforcePattern(pattern, 1.4); // 40% boost
+          }
+        });
+
+      // Registrar evolução
+      aiEvolutionTracker.recordMetric({
+        winRate: 100,
+        totalSignals: topStreaks.length,
+        phase: `Otimização Streak - Nível ${streakStats.progressionLevel}`,
+        topIndicators: Object.keys(successPatterns).slice(0, 3),
+        accuracy: idealMinProbability,
+      });
+    }
+
+    // Se a streak atual foi quebrada recentemente, analisar o porquê
+    const recentLosses = allOperations.filter(op => 
+      op.result === 'LOSS' && 
+      Date.now() - op.timestamp < 300000 // últimos 5 minutos
+    );
+
+    if (recentLosses.length > 0) {
+      console.log(`\n⚠️ Analisando ${recentLosses.length} perdas recentes:`);
+      
+      recentLosses.forEach(loss => {
+        const pattern = loss.analysisMetrics?.candlePattern;
+        if (pattern) {
+          console.log(`   - Padrão: ${pattern} (prob: ${loss.probability}%)`);
+          // Penalizar padrões que causaram perdas recentes
+          aiLearningSystem.penalizePattern(pattern, 0.5); // 50% penalty
+        }
+      });
+    }
+
+    console.log(`=== FIM DA OTIMIZAÇÃO ===\n`);
   }
 
   /**

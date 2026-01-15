@@ -2,6 +2,7 @@
 
 import { webLearningSystem, type MarketInsight } from './webIntegration';
 import { performAdvancedCandleAnalysis, type AdvancedCandleAnalysis } from './advancedCandleAnalysis';
+import { winStreakLearning } from './winStreakLearning';
 
 export interface SignalHistory {
   id: string;
@@ -89,6 +90,9 @@ export class AILearningSystem {
       signal.result = result;
       this.saveHistory();
       this.updateLearningState();
+      
+      // 🔥 Processa resultado no sistema de win streaks
+      winStreakLearning.processSignalResult(signal);
     }
   }
 
@@ -229,41 +233,93 @@ export class AILearningSystem {
   getAdaptiveProbability(baseScore: number, pattern: string, indicators: string[]): number {
     let score = baseScore;
     
-    // Boost if using best indicators
+    // 🔥 VERIFICA REGRAS DE WIN STREAK PRIMEIRO
+    const streakCheck = winStreakLearning.shouldOperateBasedOnStreak(
+      baseScore,
+      pattern,
+      { trendStrength: baseScore, volumeProfile: baseScore, supportResistance: baseScore }
+    );
+    
+    if (!streakCheck.allowed) {
+      console.log(`🚫 BLOQUEADO PELO WIN STREAK: ${streakCheck.reason}`);
+      return 0; // Rejeita completamente
+    }
+    
+    // Aplica ajustes de win streak
+    const streakAdjustments = winStreakLearning.getStreakAdjustments();
+    if (streakAdjustments.minProbabilityBoost > 0) {
+      const oldScore = score;
+      score += streakAdjustments.minProbabilityBoost;
+      console.log(`🔥 BOOST DE STREAK: +${streakAdjustments.minProbabilityBoost} (${oldScore} → ${score})`);
+    }
+    
+    // 🔥 PENALIZAÇÃO FORTE DE PADRÕES FRACOS - Esta é a chave do aprendizado!
+    const patternRates = this.getPatternSuccessRates();
+    const weakPatterns = this.analyzeWeakPatterns();
+    
+    // Se o padrão tem histórico de perda, PENALIZAR MUITO
+    if (patternRates[pattern] !== undefined) {
+      const successRate = patternRates[pattern];
+      if (successRate < 35) {
+        // Padrão muito fraco = REJEITAR DRASTICAMENTE
+        score -= 50; // Reduz MUITO
+        console.log(`🔴 PADRÃO FRACO DETECTADO: ${pattern} (${successRate.toFixed(1)}%) - Penalização SEVERA!`);
+      } else if (successRate < 45) {
+        // Padrão fraco = Penalizar bastante
+        score -= 30;
+        console.log(`⚠️ Padrão fraco: ${pattern} (${successRate.toFixed(1)}%) - Penalização moderada`);
+      } else if (successRate > 65) {
+        // Padrão forte = BOOST significativo
+        score += 20;
+        console.log(`✅ PADRÃO FORTE DETECTADO: ${pattern} (${successRate.toFixed(1)}%) - BOOST!`);
+      }
+    }
+
+    // Boost FORTE se usando melhores indicadores
     const bestIndicators = this.analyzeBestIndicators();
     const matchingIndicators = indicators.filter(i => bestIndicators.includes(i)).length;
-    score += matchingIndicators * 5;
+    score += matchingIndicators * 15; // Aumentado de 5 para 15
 
-    // Reduce if weak pattern
-    const weakPatterns = this.analyzeWeakPatterns();
-    if (weakPatterns.includes(pattern)) {
-      score -= 10;
+    // Penalizar se NÃO está usando os melhores indicadores
+    if (bestIndicators.length > 0 && matchingIndicators === 0) {
+      score -= 20;
+      console.log(`⚠️ Nenhum dos melhores indicadores está sendo usado`);
     }
 
-    // Operational rules adjustments
+    // Operational rules adjustments - PENALIZAÇÃO FORTE
     // Penaliza padrões desautorizados
     if (this.operationalConfig.disallowedPatterns.has(pattern)) {
-      score -= 15;
+      score -= 40; // Aumentado de 15 para 40
+      console.log(`🚫 Padrão bloqueado: ${pattern}`);
     }
+    
     // Pesos por indicador preferido
     indicators.forEach(ind => {
       const w = this.operationalConfig.indicatorWeights[ind];
-      if (w) score += w;
+      if (w) score += w * 2; // Dobrado o efeito
     });
-    // Confirmações exigidas: se menos que o necessário, reduzir score
+    
+    // Confirmações exigidas: se menos que o necessário, REJEITAR
     const confirmations = this.countConfirmationsFromMetrics(baseScore);
     if (confirmations < this.operationalConfig.requireConfirmations) {
-      score -= 20;
+      score -= 30; // Aumentado de 20 para 30
+      console.log(`⚠️ Confirmações insuficientes: ${confirmations}/${this.operationalConfig.requireConfirmations}`);
     }
-    // Ajuste de mínimos (proxy pelos scores do baseScore)
-    // Como não temos métricas diretas aqui, aplicamos pequenos ajustes no final em evolveAI()
 
-    // Apply evolution multiplier
+    // Apply evolution multiplier - aumentado significativamente
     const evolutionPhase = this.evolveAI();
-    const multiplier = 1 + (evolutionPhase - 1) * 0.05;
+    const multiplier = 1 + (evolutionPhase - 1) * 0.15; // Aumentado de 0.05 para 0.15
     score *= multiplier;
 
-    return Math.min(100, Math.max(50, Math.round(score)));
+    // 🎯 LIMITE MÍNIMO MUITO MAIS RIGOROSO - A IA PRECISA APRENDER A SER SELETIVA
+    const minThreshold = 55; // Aumentado de 50 para 55
+    const finalScore = Math.min(98, Math.max(minThreshold, Math.round(score)));
+    
+    if (finalScore === minThreshold && score < minThreshold) {
+      console.log(`⚠️ Sinal rejeitado: score ${score.toFixed(1)} abaixo do mínimo`);
+    }
+
+    return finalScore;
   }
 
   private countConfirmationsFromMetrics(baseScore: number): number {
@@ -461,23 +517,34 @@ export class AILearningSystem {
   }
 
   // Reforça um padrão específico (usado pelo aprendizado contínuo)
-  reinforcePattern(pattern: string, multiplier: number = 1.15): void {
+  reinforcePattern(pattern: string, multiplier: number = 1.25): void {
     if (!this.learningState.patternSuccessRates[pattern]) {
       this.learningState.patternSuccessRates[pattern] = 50;
     }
-    this.learningState.patternSuccessRates[pattern] *= multiplier;
+    // 🔥 BOOST MUITO MAIOR para padrões vencedores
+    const oldRate = this.learningState.patternSuccessRates[pattern];
+    this.learningState.patternSuccessRates[pattern] = Math.min(95, oldRate * multiplier);
     this.saveHistory();
-    console.log(`📈 Padrão ${pattern} reforçado: ${this.learningState.patternSuccessRates[pattern].toFixed(1)}%`);
+    console.log(`📈 PADRÃO REFORÇADO: ${pattern} | ${oldRate.toFixed(1)}% → ${this.learningState.patternSuccessRates[pattern].toFixed(1)}%`);
   }
 
   // Penaliza um padrão específico (usado pelo aprendizado contínuo)
-  penalizePattern(pattern: string, multiplier: number = 0.85): void {
+  penalizePattern(pattern: string, multiplier: number = 0.65): void {
     if (!this.learningState.patternSuccessRates[pattern]) {
       this.learningState.patternSuccessRates[pattern] = 50;
     }
-    this.learningState.patternSuccessRates[pattern] *= multiplier;
+    // 🔴 PENALIZAÇÃO MUITO MAIOR para padrões perdedores
+    const oldRate = this.learningState.patternSuccessRates[pattern];
+    this.learningState.patternSuccessRates[pattern] = Math.max(15, oldRate * multiplier);
+    
+    // Adicionar aos padrões não recomendados se muito fraco
+    if (this.learningState.patternSuccessRates[pattern] < 30) {
+      this.operationalConfig.disallowedPatterns.add(pattern);
+      console.log(`🚫 PADRÃO BLOQUEADO: ${pattern} - Taxa de sucesso ${this.learningState.patternSuccessRates[pattern].toFixed(1)}%`);
+    }
+    
     this.saveHistory();
-    console.log(`📉 Padrão ${pattern} penalizado: ${this.learningState.patternSuccessRates[pattern].toFixed(1)}%`);
+    console.log(`📉 PADRÃO PENALIZADO: ${pattern} | ${oldRate.toFixed(1)}% → ${this.learningState.patternSuccessRates[pattern].toFixed(1)}%`);
   }
 }
 

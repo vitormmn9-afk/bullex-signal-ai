@@ -1,0 +1,20 @@
+[Unit]
+Description=Bullex Signal AI Server - Always-On Service
+After=network.target
+StartLimitInterval=0
+StartLimitBurst=0
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/workspaces/bullex-signal-ai
+ExecStart=/bin/bash /workspaces/bullex-signal-ai/keep-alive.sh
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=bullex-server
+Environment="NODE_ENV=production"
+
+[Install]
+WantedBy=multi-user.target

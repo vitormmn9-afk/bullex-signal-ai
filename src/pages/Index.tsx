@@ -67,7 +67,7 @@ const Index = () => {
     .filter((s) => Number(s.probability) >= minProbability)
     .filter((s) => directionFilter === "ALL" || s.direction === directionFilter);
 
-  // ✅ SIMULAÇÃO DE PREÇOS PARA AUTO-ANÁLISE
+  // ✅ SIMULAÇÃO DE PREÇOS PARA AUTO-ANÁLISE (otimizado)
   useEffect(() => {
     const assets = [
       "EUR/USD", "GBP/USD", "USD/JPY", "AUD/USD", "USD/CAD",
@@ -76,7 +76,10 @@ const Index = () => {
     ];
 
     const priceInterval = setInterval(() => {
-      assets.forEach(asset => {
+      // Atualizar apenas 3 ativos por vez para não travar
+      const randomAssets = assets.sort(() => 0.5 - Math.random()).slice(0, 3);
+      
+      randomAssets.forEach(asset => {
         const basePrice = 100 + Math.random() * 50;
         const volatility = 2; // 2% de volatilidade
         
@@ -92,9 +95,9 @@ const Index = () => {
 
         aiSignalAnalyzer.updatePrice(priceData);
       });
-    }, 3000); // Atualizar preços a cada 3 segundos
+    }, 5000); // Atualizar a cada 5 segundos (mais leve)
 
-    console.log('📊 Simulação de preços iniciada para auto-análise');
+    console.log('📊 Simulação de preços otimizada iniciada');
 
     return () => clearInterval(priceInterval);
   }, []);

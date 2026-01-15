@@ -111,7 +111,7 @@ export function useSignals(marketType: "OTC" | "OPEN", autoGenerate: boolean = t
   const [isGenerating, setIsGenerating] = useState(false);
   const [autoGenerateEnabled, setAutoGenerateEnabled] = useState(autoGenerate);
   const [minProbability, setMinProbability] = useState<number>(50); // Reduzido de 85% para 50% para permitir aprendizado adaptativo
-  const [autoRefreshInterval, setAutoRefreshInterval] = useState<number>(60); // 60 segundos
+  const [autoRefreshInterval, setAutoRefreshInterval] = useState<number>(30); // 30 segundos - geração mais rápida
   const { toast } = useToast();
   
   // ✅ REF PARA FUNÇÃO DE GERAÇÃO DE SINAL (necessária para auto-geração)

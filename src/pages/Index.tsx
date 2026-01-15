@@ -99,8 +99,16 @@ const Index = () => {
   ];
 
   const displaySignals = signals
+    .filter((s) => s.market_type === marketType) // ✅ FILTRAR POR MERCADO CORRETO
     .filter((s) => Number(s.probability) >= minProbability)
     .filter((s) => directionFilter === "ALL" || s.direction === directionFilter);
+
+  // Log para debug
+  useEffect(() => {
+    console.log(`📊 Total de sinais no state: ${signals.length}`);
+    console.log(`🎯 Sinais do mercado ${marketType}: ${signals.filter(s => s.market_type === marketType).length}`);
+    console.log(`👁️ Sinais exibidos após filtros: ${displaySignals.length}`);
+  }, [signals, marketType, displaySignals.length]);
 
   // ✅ SIMULAÇÃO DE PREÇOS PARA AUTO-ANÁLISE (DESATIVADA - causava marcação automática errada)
   useEffect(() => {

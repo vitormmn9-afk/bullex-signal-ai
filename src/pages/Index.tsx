@@ -14,8 +14,10 @@ import { StatsCard } from "@/components/StatsCard";
 import { MarketToggle } from "@/components/MarketToggle";
 import { GenerateButton } from "@/components/GenerateButton";
 import { AutoGenerateToggle } from "@/components/AutoGenerateToggle";
+import { WinStreakDisplay } from "@/components/WinStreakDisplay";
 const PerformanceChart = lazy(() => import("@/components/PerformanceChart").then(m => ({ default: m.PerformanceChart })));
 import { useSignals } from "@/hooks/useSignals";
+import { useWinStreak } from "@/hooks/useWinStreak";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -53,6 +55,9 @@ const Index = () => {
     autoRefreshInterval,
     setAutoRefreshInterval
   } = useSignals(marketType, true);
+  
+  // Dados do streak de vitórias
+  const streakStats = useWinStreak();
 
   // Mock chart data - would come from real performance metrics
   const chartData = [
@@ -218,7 +223,14 @@ const Index = () => {
           </Button>
         </div>
 
-        {/* Content Based on Tab */}
+        {/* CoWin Streak Display */}
+          <WinStreakDisplay 
+            currentStreak={streakStats.currentStreak}
+            targetStreak={streakStats.targetStreak}
+            longestStreak={streakStats.longestStreak}
+          />
+
+          {/* ntent Based on Tab */}
         {activeTab === "signals" ? (
           <>
           {/* Stats Grid */}

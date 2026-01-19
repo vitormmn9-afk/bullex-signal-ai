@@ -641,17 +641,17 @@ export function useSignals(marketType: "OTC" | "OPEN", autoGenerate: boolean = t
       console.log(`💡 Recomendação: ${multiSignalValidation.recommendation}`);
       
       if (!multiSignalValidation.isValid) {
-        console.log(`\n❌❌❌ VALIDAÇÃO DE SINAIS FALHOU ❌❌❌`);
-        console.log(`   Score: ${multiSignalValidation.score.toFixed(1)} (mínimo: 70)`);
-        console.log(`   Sinais: ${multiSignalValidation.signals.filter(s => s.present).length} (mínimo: 5)`);
+        console.log(`\n⚠️ Validação de múltiplos sinais com score baixo`);
+        console.log(`   Score: ${multiSignalValidation.score.toFixed(1)} (mínimo: 50)`);
+        console.log(`   Sinais: ${multiSignalValidation.signals.filter(s => s.present).length} (mínimo: 3)`);
         console.log('='.repeat(50));
         
-        // Penalizar fortemente probabilidade
-        adaptiveProbability -= 40;
-        console.log(`🔴 PENALIZAÇÃO POR FALTA DE SINAIS: -40`);
+        // Penalizar levemente
+        adaptiveProbability -= 10; // Reduzido de 40
+        console.log(`⚠️ PENALIZAÇÃO LEVE POR SINAIS: -10`);
       } else {
         // Bonificar por múltiplos sinais confirmados
-        const signalBonus = Math.min(20, multiSignalValidation.score * 0.2);
+        const signalBonus = Math.min(15, multiSignalValidation.score * 0.15); // Reduzido de 20
         adaptiveProbability += signalBonus;
         console.log(`✅ BÔNUS POR MÚLTIPLOS SINAIS: +${signalBonus.toFixed(1)}`);
       }
@@ -661,7 +661,7 @@ export function useSignals(marketType: "OTC" | "OPEN", autoGenerate: boolean = t
       
       // 🚫 THRESHOLD INICIAL REALISTA - Permite aprendizado e melhoria gradual
       const currentWinRate = learningState.winRate;
-      const MIN_PROBABILITY_THRESHOLD = currentWinRate < 40 ? 50 : (currentWinRate < 55 ? 55 : 60); // 🔥 ADAPTATIVO
+      const MIN_PROBABILITY_THRESHOLD = currentWinRate < 40 ? 45 : (currentWinRate < 55 ? 50 : 55); // 🔥 ADAPTATIVO - REDUZIDO
       if (adaptiveProbability < MIN_PROBABILITY_THRESHOLD) {
         console.log(`❌ SINAL REJEITADO: Probabilidade ${adaptiveProbability.toFixed(1)}% abaixo do mínimo ${MIN_PROBABILITY_THRESHOLD}%`);
         console.log(`🚨 WinRate: ${currentWinRate.toFixed(1)}% - IA precisa aprender com mais operações!\n`);
@@ -702,76 +702,76 @@ export function useSignals(marketType: "OTC" | "OPEN", autoGenerate: boolean = t
         }
       }
 
-      // Verificar requisitos mínimos aprendidos - ULTRA-RIGOROSO
+      // Verificar requisitos mínimos aprendidos - MODERADO
       if (analysis.trendStrength < operationalConfig.minTrendStrength) {
-        adaptiveProbability -= 35; // Aumentado de 25 para 35
-        console.log(`🔴 Trend Strength ${analysis.trendStrength.toFixed(1)} MUITO abaixo do mínimo ${operationalConfig.minTrendStrength} - PENALIZAÇÃO SEVERA`);
+        adaptiveProbability -= 10; // Reduzido de 35 para 10
+        console.log(`⚠️ Trend Strength ${analysis.trendStrength.toFixed(1)} abaixo do mínimo ${operationalConfig.minTrendStrength}`);
       }
       
       if (analysis.supportResistance < operationalConfig.minSupportResistance) {
-        adaptiveProbability -= 30; // Aumentado de 25 para 30
-        console.log(`🔴 S/R ${analysis.supportResistance.toFixed(1)} MUITO abaixo do mínimo ${operationalConfig.minSupportResistance} - PENALIZAÇÃO SEVERA`);
+        adaptiveProbability -= 8; // Reduzido de 30 para 8
+        console.log(`⚠️ S/R ${analysis.supportResistance.toFixed(1)} abaixo do mínimo ${operationalConfig.minSupportResistance}`);
       }
 
-      // Aplicar taxa de acerto histórica COM MUITO MAIS PESO
+      // Aplicar taxa de acerto histórica COM PESO MODERADO
       if (currentWinRate > 0) {
         if (currentWinRate < 30) {
-          // CRÍTICO - perdendo MUITO - REJEITAR QUASE TUDO
-          adaptiveProbability -= 60;
-          console.log(`🚨 CRÍTICO: Win Rate ${currentWinRate.toFixed(1)}% - REJEITANDO AGRESSIVAMENTE`);
+          // CRÍTICO - perdendo MUITO - penalidade leve
+          adaptiveProbability -= 15;
+          console.log(`⚠️ Win Rate crítico (${currentWinRate.toFixed(1)}%) - Penalização leve`);
         } else if (currentWinRate < 40) {
-          // Muito ruim - Penalização muito forte
-          adaptiveProbability -= 45;
-          console.log(`🔴 Win Rate muito baixo (${currentWinRate.toFixed(1)}%) - Penalização muito severa`);
+          // Muito ruim - Penalização leve
+          adaptiveProbability -= 10;
+          console.log(`⚠️ Win Rate baixo (${currentWinRate.toFixed(1)}%) - Penalização leve`);
         } else if (currentWinRate < 50) {
-          // Ruim - Penalização forte
-          adaptiveProbability -= 30;
-          console.log(`⚠️ Win Rate baixo (${currentWinRate.toFixed(1)}%) - Sendo muito conservador`);
+          // Ruim - Penalização mínima
+          adaptiveProbability -= 5;
+          console.log(`⚠️ Win Rate abaixo de 50% (${currentWinRate.toFixed(1)}%) - Penalização mínima`);
         } else if (currentWinRate > 80) {
           // Excelente!
-          adaptiveProbability += 15;
-          console.log(`🚀 Win Rate excelente (${currentWinRate.toFixed(1)}%) - Confiança máxima!`);
+          adaptiveProbability += 12;
+          console.log(`🚀 Win Rate excelente (${currentWinRate.toFixed(1)}%) - Boost bom!`);
         } else if (currentWinRate > 70) {
           // Muito bom
-          adaptiveProbability += 10;
-          console.log(`📈 Win Rate alto (${currentWinRate.toFixed(1)}%) - Confiança aumentada`);
+          adaptiveProbability += 8;
+          console.log(`📈 Win Rate alto (${currentWinRate.toFixed(1)}%) - Boost moderado`);
         } else if (currentWinRate > 60) {
           // Bom
-          adaptiveProbability += 5;
-          console.log(`📈 Win Rate positivo (${currentWinRate.toFixed(1)}%) - Ligeira confiança`);
+          adaptiveProbability += 3;
+          console.log(`📈 Win Rate bom (${currentWinRate.toFixed(1)}%) - Boost pequeno`);
         }
       }
 
-      // 🔥 VALIDAÇÃO FINAL ULTRA-RIGOROSA
-      // Exigir múltiplos indicadores fortes (pelo menos 2)
+      // 🔥 VALIDAÇÃO FINAL FLEXÍVEL
+      // Aceitar pelo menos 1 indicador forte
       const strongIndicators = [
         analysis.rsi > 70 || analysis.rsi < 30,
-        Math.abs(analysis.macd) > 0.5,
-        analysis.trendStrength > 60,
-        analysis.supportResistance > 60,
-        advancedAnalysis.prediction.confidence > 70
+        Math.abs(analysis.macd) > 0.3, // Reduzido de 0.5
+        analysis.trendStrength > 50, // Reduzido de 60
+        analysis.supportResistance > 50, // Reduzido de 60
+        advancedAnalysis.prediction.confidence > 60 // Reduzido de 70
       ].filter(Boolean).length;
       
-      if (strongIndicators < 2) {
-        adaptiveProbability -= 40;
-        console.log(`⚠️ Apenas ${strongIndicators} indicadores fortes - PENALIZAÇÃO (necessário 2+)`);
-      } else if (strongIndicators >= 3) {
-        adaptiveProbability += 15;
+      if (strongIndicators < 1) {
+        adaptiveProbability -= 15; // Reduzido de 40
+        console.log(`⚠️ Apenas ${strongIndicators} indicador forte - Penalização leve`);
+      } else if (strongIndicators >= 2) {
+        adaptiveProbability += 8; // Reduzido de 15
         console.log(`✅ ${strongIndicators} indicadores fortes - BOOST!`);
       }
       
-      // Exigir score mínimo da análise avançada
-      if (advancedAnalysis.score < 55) {
-        adaptiveProbability -= 30;
-        console.log(`🔴 Score avançado MUITO baixo (${advancedAnalysis.score.toFixed(1)}) - PENALIZADO!`);
-      } else if (advancedAnalysis.score > 75) {
-        adaptiveProbability += 20;
+      // Score mínimo mais flexível
+      if (advancedAnalysis.score < 45) {
+        adaptiveProbability -= 12; // Reduzido de 30
+        console.log(`⚠️ Score avançado baixo (${advancedAnalysis.score.toFixed(1)}) - Penalização leve`);
+      } else if (advancedAnalysis.score > 70) {
+        adaptiveProbability += 12; // Reduzido de 20
         console.log(`✅ Score avançado ALTO (${advancedAnalysis.score.toFixed(1)}) - BOOST!`);
       }
 
       // 🎯 THRESHOLDS PROGRESSIVOS E REALISTAS - Permite aprendizado gradual
       // Começa mais permissivo e endurece conforme melhora
-      const minThreshold = currentWinRate < 40 ? 55 : (currentWinRate < 50 ? 58 : (currentWinRate < 60 ? 62 : 65)); // 🔥 PROGRESSIVO
+      const minThreshold = currentWinRate < 40 ? 42 : (currentWinRate < 50 ? 45 : (currentWinRate < 60 ? 50 : 55)); // 🔥 PROGRESSIVO - REDUZIDO
       adaptiveProbability = Math.min(95, Math.max(minThreshold, Math.round(adaptiveProbability)));
 
       console.log('🎲 Probabilidade final após aprendizado:', adaptiveProbability.toFixed(1) + '%', '| Filtro mínimo:', minProbability + '%', '| Min threshold:', minThreshold);

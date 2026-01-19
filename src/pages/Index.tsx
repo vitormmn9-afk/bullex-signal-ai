@@ -387,22 +387,6 @@ const Index = () => {
         {/* Automatic Learning Test */}
         <AutomaticLearningTest />
 
-                  </>
-        ) : activeTab === "evolution" ? (
-          <>
-            <AIEvolutionPanel />
-            
-            {/* Novo painel de evolução ativa */}
-            <EvolutionDashboard />
-          </>
-        ) : activeTab === "learning" ? (
-          <>
-            <AILearningLogPanel />
-          </>
-        ) : (
-          <KnowledgePanel />
-        )}
-
         {/* Confidence Threshold */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
@@ -461,13 +445,7 @@ const Index = () => {
               <p>Nenhum sinal ≥ {minProbability}% encontrado</p>
               <p className="text-sm">Ative a geração automática ou tente novamente em alguns segundos</p>
             </div>
-          ) : activeTab === "test" ? (
-          <AutoAnalysisTestNew />
-        ) : activeTab === "knowledge" ? (
-          <KnowledgePanel />
-        ) : activeTab === "ai-control" ? (
-          <AIControlDashboard />
-        ) : (
+          ) : (
             <div className="space-y-3">
               {displaySignals.map((signal, idx) => (
                 <div key={signal.id} className="animate-fade-in">
@@ -513,6 +491,27 @@ const Index = () => {
             </div>
           )}
         </div>
+
+                  </>
+        ) : activeTab === "test" ? (
+          <AutoAnalysisTestNew />
+        ) : activeTab === "evolution" ? (
+          <>
+            <AIEvolutionPanel />
+            
+            {/* Novo painel de evolução ativa */}
+            <EvolutionDashboard />
+          </>
+        ) : activeTab === "learning" ? (
+          <>
+            <AILearningLogPanel />
+          </>
+        ) : activeTab === "knowledge" ? (
+          <KnowledgePanel />
+        ) : activeTab === "ai-control" ? (
+          <AIControlDashboard />
+        ) : null
+        }
       </main>
 
       {/* Footer */}

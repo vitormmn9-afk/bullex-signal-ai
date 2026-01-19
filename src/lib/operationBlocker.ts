@@ -46,50 +46,13 @@ export class OperationBlocker {
     candles: CandleData[],
     marketStructureType: string
   ): OperationBlock {
+    // 🔥 NOVO: Permitir todas as operações inicialmente para aprendizado
+    // O sistema de bloqueio é muito rigoroso e impede usuários novos de testarem
+    // Desativando completamente para modo de aprendizado
+    const isBlocked = false;
     const reasons: string[] = [];
-    let severity: OperationBlock['severity'] = 'LOW';
-
-    // 1. Verificar mercado lateral
-    if (this.isLateralMarket(candles, marketStructureType)) {
-      reasons.push('❌ Mercado lateral - sem direção clara');
-      severity = this.upgradeSeverity(severity, 'HIGH');
-    }
-
-    // 2. Verificar tamanho de vela
-    const candleSizeCheck = this.checkCandleSize(candles);
-    if (candleSizeCheck) {
-      reasons.push(candleSizeCheck.reason);
-      severity = this.upgradeSeverity(severity, candleSizeCheck.severity);
-    }
-
-    // 3. Verificar volatilidade
-    if (this.hasLowVolatility(candles)) {
-      reasons.push('❌ Baixa volatilidade - mercado sem movimento');
-      severity = this.upgradeSeverity(severity, 'HIGH');
-    }
-
-    // 4. Verificar notícias econômicas
-    const newsCheck = this.checkEconomicNews();
-    if (newsCheck) {
-      reasons.push(newsCheck.reason);
-      severity = this.upgradeSeverity(severity, newsCheck.severity);
-    }
-
-    // 5. Verificar horário de mercado
-    const timeCheck = this.checkMarketTime();
-    if (timeCheck) {
-      reasons.push(timeCheck.reason);
-      severity = this.upgradeSeverity(severity, timeCheck.severity);
-    }
-
-    // 6. Verificar consolidação extrema
-    if (this.isExtremeConsolidation(candles)) {
-      reasons.push('❌ Consolidação extrema - aguardar rompimento');
-      severity = this.upgradeSeverity(severity, 'MEDIUM');
-    }
-
-    const isBlocked = reasons.length > 0;
-    const recommendation = this.generateRecommendation(reasons, severity);
+    const severity: OperationBlock['severity'] = 'LOW';
+    const recommendation = '✅ Operação LIBERADA - Sistema em modo de aprendizado. Sempre use stop loss!';
 
     return {
       isBlocked,
@@ -100,28 +63,11 @@ export class OperationBlocker {
   }
 
   /**
-   * Verifica se mercado está lateral
+   * Verifica se mercado está lateral (DESATIVADO)
    */
   private isLateralMarket(candles: CandleData[], marketStructureType: string): boolean {
-    // Se estrutura de mercado já identificou como lateral
-    if (marketStructureType === 'RANGING' || marketStructureType === 'CONSOLIDATION') {
-      return true;
-    }
-
-    if (candles.length < 15) return false;
-
-    const recentCandles = candles.slice(-15);
-    const highs = recentCandles.map(c => c.high);
-    const lows = recentCandles.map(c => c.low);
-    
-    const maxHigh = Math.max(...highs);
-    const minLow = Math.min(...lows);
-    const avgPrice = (maxHigh + minLow) / 2;
-    
-    const rangePercent = ((maxHigh - minLow) / avgPrice) * 100;
-    
-    // Lateral se range < 0.8%
-    return rangePercent < this.lateralRangeMax;
+    // 🔥 DESATIVADO para modo de aprendizado
+    return false;
   }
 
   /**

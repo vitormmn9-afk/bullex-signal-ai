@@ -48,8 +48,8 @@ interface MarketAnalysis {
 }
 
 export class MultiSignalValidator {
-  private readonly MIN_SIGNALS_REQUIRED = 5;
-  private readonly MIN_SCORE_REQUIRED = 70; // 70% de confiança mínima
+  private readonly MIN_SIGNALS_REQUIRED = 3; // Reduzido de 5 para 3
+  private readonly MIN_SCORE_REQUIRED = 50; // Reduzido de 70 para 50
 
   /**
    * Valida se há sinais suficientes para operar

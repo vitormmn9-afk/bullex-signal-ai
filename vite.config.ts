@@ -4,7 +4,7 @@ import path from "path";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
-  base: mode === 'production' ? '/bullex-signal-ai/' : '/',
+  base: '/',
   server: {
     host: "0.0.0.0",
     port: 8080,

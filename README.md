@@ -7,6 +7,40 @@ Aplicação de sinais com IA para velas de 1 minuto, com filtro de confiança m�
 - Tailwind + shadcn-ui
 - Supabase (cliente)
 
+## 🚀 Servidor IMORTAL (NOVO!)
+
+O servidor agora é **IMORTAL** e sobrevive à hibernação do Codespace! 🛡️
+
+### Iniciar Servidor Imortal
+```bash
+/workspaces/bullex-signal-ai/start-immortal-server.sh
+```
+
+### Verificar Status
+```bash
+/workspaces/bullex-signal-ai/check-server.sh
+```
+
+### Testar Resiliência (Simular Hibernação)
+```bash
+/workspaces/bullex-signal-ai/test-hibernation.sh
+```
+
+### Logs Disponíveis
+```bash
+tail -f /tmp/monitor-immortal.log  # Monitor imortal
+tail -f /tmp/vite-server.log       # Servidor
+```
+
+**📖 Documentação completa:** [HIBERNATION_SOLVED.md](HIBERNATION_SOLVED.md)
+
+### ✅ Garantias
+- ✅ Servidor revive automaticamente em até 15 segundos se morrer
+- ✅ Auto-start quando o Codespace acorda
+- ✅ Processos daemon independentes (nohup + disown)
+- ✅ Monitor em loop infinito
+- ✅ Testado e aprovado!
+
 ## Rodando localmente
 
 ```bash

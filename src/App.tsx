@@ -6,6 +6,9 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 
+// 🤖 Importa sistema de aprendizado automático (auto-start)
+import './lib/automaticLearning';
+
 const queryClient = new QueryClient();
 
 const App = () => (

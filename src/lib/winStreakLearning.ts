@@ -51,10 +51,10 @@ class WinStreakLearningSystem {
   private config: StreakLearningConfig = {
     initialTarget: 15,
     progressionIncrement: 5, // Aumenta 5 após cada meta atingida
-    minConfidence: 65, // Reduzido para 65% - mais agressivo
-    conservativeMode: false, // DESATIVADO - modo agressivo
-    adaptiveWeights: true,
-    maxLossesBeforeReset: 3, // 🔥 RESETAR APÓS 3 DERROTAS (mais rápido)
+    minConfidence: 65, // 🔥 Ajustado para 65% - BALANÇO entre quantidade e qualidade
+    conservativeMode: false, // 🔥 DESATIVADO - modo ULTRA-AGRESSIVO
+    adaptiveWeights: true, // 🔥 SEMPRE ATIVO
+    maxLossesBeforeReset: 2, // 🔥 2 DERROTAS = RESET (aprendizado super rápido!)
   };
 
   private currentStreakSignals: string[] = [];

@@ -154,4 +154,20 @@
       opacity: 0.9;
     }
   }
+
+  /* Prevenir overlays indesejados de sliders e outros componentes */
+  [data-radix-popper-content-wrapper] {
+    z-index: 100 !important;
+  }
+  
+  /* Garantir que sliders não criem overlays */
+  [role="slider"] {
+    z-index: 10 !important;
+  }
+  
+  /* Prevenir overlays escuros indesejados */
+  [data-state="closed"][data-radix-overlay] {
+    pointer-events: none !important;
+    opacity: 0 !important;
+  }
 }

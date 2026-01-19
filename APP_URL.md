@@ -2,31 +2,35 @@
 
 ## ✅ Servidor RODANDO
 
-### 🔗 URL Pública (Use esta):
-```
-https://$CODESPACE_NAME-8080.app.github.dev
-```
+### 🔗 URL Pública (CLIQUE AQUI):
 
-> 💡 **Nota**: A URL acima é um template. Para obter a URL real, execute:
-> ```bash
-> echo "https://$CODESPACE_NAME-8080.app.github.dev"
-> ```
+**👉 https://effective-fortnight-5gjq4xxw65v92xqp-8080.app.github.dev**
 
-### 📱 Acesso Rápido:
-1. Copie a URL acima
-2. Cole em uma nova aba do navegador
-3. Aguarde ~5 segundos para carregar
+> ⚡ **ABRA ESTA URL NO NAVEGADOR PARA ACESSAR O APP**
 
 ---
 
-## ⚙️ Configuração da Porta (se necessário)
+### 📱 Como Acessar:
 
-Se a porta não estiver pública, faça:
+1. **Copie** a URL acima
+2. **Cole** em uma nova aba do navegador
+3. Aguarde ~5 segundos para carregar
+4. ✅ Pronto! O app está rodando
 
-1. No VS Code, vá para a aba **PORTS** (Portas)
+---
+
+## ⚙️ Se a URL não funcionar:
+
+### Opção 1: Verificar Porta no VS Code
+1. No VS Code, clique na aba **PORTS** (Portas) no painel inferior
 2. Encontre a porta **8080**
-3. Clique com botão direito
-4. Selecione **"Port Visibility"** → **"Public"**
+3. Clique no ícone do **globo** 🌐 para abrir no navegador
+4. Ou clique com botão direito → **"Port Visibility"** → **"Public"**
+
+### Opção 2: Usar Simple Browser no VS Code
+1. Pressione `Ctrl+Shift+P` (ou `Cmd+Shift+P` no Mac)
+2. Digite: **"Simple Browser: Show"**
+3. Cole a URL acima
 
 ---
 
@@ -34,7 +38,7 @@ Se a porta não estiver pública, faça:
 
 1. ✅ Selecione **OTC** ou **OPEN**
 2. ✅ Clique no toggle **"Auto-Geração"**
-3. ✅ Abra o Console (F12)
+3. ✅ Abra o Console (F12) para ver logs
 4. ✅ Observe sinais sendo gerados automaticamente
 
 ---
@@ -42,11 +46,11 @@ Se a porta não estiver pública, faça:
 ## 🔧 Se Precisar Reiniciar o Servidor:
 
 ```bash
-# Parar
-pkill -f "vite"
+# Parar tudo
+pkill -f "keep-alive" && pkill -f "vite"
 
-# Iniciar
-cd /workspaces/bullex-signal-ai && npm run dev
+# Iniciar novamente
+bash /workspaces/bullex-signal-ai/start-persistent.sh
 ```
 
 ---
@@ -54,8 +58,9 @@ cd /workspaces/bullex-signal-ai && npm run dev
 ## 📊 Status Atual:
 - ✅ Servidor: **RODANDO**
 - ✅ Porta: **8080**
-- ✅ Codespace: **effective-fortnight-5gjq4xxw65v92xqp**
+- ✅ Keep-Alive: **ATIVO**
+- ✅ URL Pública: **CONFIGURADA**
 
 ---
 
-**Última atualização:** 13/01/2026
+**Última atualização:** 15/01/2026 23:54

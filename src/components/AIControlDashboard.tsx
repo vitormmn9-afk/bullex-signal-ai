@@ -10,6 +10,7 @@ import { aiCommandSystem } from '@/lib/aiCommandSystem';
 import AITrainingPanel from './AITrainingPanel';
 import AICommandPanel from './AICommandPanel';
 import AIAutoAnalysisPanel from './AIAutoAnalysisPanel';
+import { AntiLossMonitor } from './AntiLossMonitor';
 import {
   Brain,
   TrendingUp,
@@ -18,6 +19,7 @@ import {
   BarChart3,
   Target,
   Users,
+  Shield,
 } from 'lucide-react';
 
 export const AIControlDashboard: React.FC = () => {
@@ -155,7 +157,7 @@ export const AIControlDashboard: React.FC = () => {
 
       {/* Main Tabs */}
       <Tabs defaultValue="training" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 bg-slate-800 border border-slate-700">
+        <TabsList className="grid w-full grid-cols-5 bg-slate-800 border border-slate-700">
           <TabsTrigger
             value="training"
             className="data-[state=active]:bg-purple-900 data-[state=active]:text-white gap-2"
@@ -178,6 +180,13 @@ export const AIControlDashboard: React.FC = () => {
             Auto-Analysis
           </TabsTrigger>
           <TabsTrigger
+            value="antiloss"
+            className="data-[state=active]:bg-red-900 data-[state=active]:text-white gap-2"
+          >
+            <Shield className="w-4 h-4" />
+            Anti-Loss
+          </TabsTrigger>
+          <TabsTrigger
             value="analytics"
             className="data-[state=active]:bg-green-900 data-[state=active]:text-white gap-2"
           >
@@ -196,6 +205,10 @@ export const AIControlDashboard: React.FC = () => {
 
         <TabsContent value="auto-analysis" className="space-y-4">
           <AIAutoAnalysisPanel />
+        </TabsContent>
+
+        <TabsContent value="antiloss" className="space-y-4">
+          <AntiLossMonitor />
         </TabsContent>
 
         <TabsContent value="analytics" className="space-y-4">

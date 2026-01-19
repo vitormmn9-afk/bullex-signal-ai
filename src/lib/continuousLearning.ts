@@ -16,10 +16,10 @@ export interface ContinuousLearningConfig {
 
 class ContinuousLearningSystem {
   private config: ContinuousLearningConfig = {
-    enabled: true,
-    learningInterval: 30000, // 30 segundos
-    minOperationsToLearn: 3,
-    adaptiveThreshold: true,
+    enabled: true, // 🔥 SEMPRE ATIVO
+    learningInterval: 15000, // 🔥 15 segundos (reduzido de 30s) - APRENDE MAIS RÁPIDO
+    minOperationsToLearn: 2, // 🔥 Reduzido de 3 para 2 - APRENDE COM MENOS DADOS
+    adaptiveThreshold: true, // 🔥 SEMPRE ADAPTANDO
   };
 
   private learningIntervalId: NodeJS.Timeout | null = null;

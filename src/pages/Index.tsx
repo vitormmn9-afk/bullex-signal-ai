@@ -15,6 +15,7 @@ import { MarketToggle } from "@/components/MarketToggle";
 import { GenerateButton } from "@/components/GenerateButton";
 import { AutoGenerateToggle } from "@/components/AutoGenerateToggle";
 import { WinStreakDisplay } from "@/components/WinStreakDisplay";
+import { ResetResultsButton } from "@/components/ResetResultsButton";
 const PerformanceChart = lazy(() => import("@/components/PerformanceChart").then(m => ({ default: m.PerformanceChart })));
 import { useSignals } from "@/hooks/useSignals";
 import { useWinStreak } from "@/hooks/useWinStreak";
@@ -35,6 +36,9 @@ import { AutomaticLearningTest } from "@/components/AutomaticLearningTest";
 import { RealTimeLearningMonitor } from "@/components/RealTimeLearningMonitor";
 import { AdaptiveStrategyPanel } from "@/components/AdaptiveStrategyPanel";
 import { WinStreakMonitor } from "@/components/WinStreakMonitor";
+import { PersistenceStatus } from "@/components/PersistenceStatus";
+import { AntiLossMonitor } from "@/components/AntiLossMonitor";
+import { EvolutionDashboard } from "@/components/EvolutionDashboard";
 
 const Index = () => {
   const [marketType, setMarketType] = useState<"OTC" | "OPEN">("OPEN");
@@ -205,8 +209,11 @@ const Index = () => {
       </header>
 
       <main className="container mx-auto px-4 py-6 space-y-6">
-        {/* Market Toggle */}
-        <MarketToggle value={marketType} onChange={setMarketType} />
+        {/* Market Toggle and Reset Button */}
+        <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+          <MarketToggle value={marketType} onChange={setMarketType} />
+          <ResetResultsButton onReset={() => window.location.reload()} />
+        </div>
 
         {/* Tab Navigation */}
         <div className="flex gap-2 bg-card/50 p-2 rounded-lg border border-border/50 overflow-x-auto">
@@ -371,6 +378,9 @@ const Index = () => {
         {/* Win Streak Monitor */}
         <WinStreakMonitor />
 
+        {/* Persistence Status */}
+        <PersistenceStatus />
+
         {/* Real Time Learning Monitor */}
         <RealTimeLearningMonitor />
 
@@ -379,7 +389,12 @@ const Index = () => {
 
                   </>
         ) : activeTab === "evolution" ? (
-          <AIEvolutionPanel />
+          <>
+            <AIEvolutionPanel />
+            
+            {/* Novo painel de evolução ativa */}
+            <EvolutionDashboard />
+          </>
         ) : activeTab === "learning" ? (
           <>
             <AILearningLogPanel />

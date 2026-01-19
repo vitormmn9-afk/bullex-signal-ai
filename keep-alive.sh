@@ -11,6 +11,8 @@ LOG_FILE="/tmp/keep-alive.log"
 SERVER_LOG="/tmp/vite-server.log"
 CHECK_INTERVAL=5
 MAX_RETRIES=3
+MAX_FAILURES=5  # Limite de falhas consecutivas antes de parar
+FAILURE_COUNT=0
 
 # Criar arquivo de log
 touch "$LOG_FILE" "$SERVER_LOG"
@@ -24,13 +26,24 @@ log_message() {
 check_server() {
     local retry=0
     while [ $retry -lt 3 ]; do
-        if timeout 2 curl -sf http://localhost:$PORT > /dev/null 2>&1; then
+        if timeout 3 curl -sf http://localhost:$PORT > /dev/null 2>&1; then
+            FAILURE_COUNT=0  # Reset contador de falhas
             return 0
         fi
         retry=$((retry + 1))
         sleep 1
     done
     return 1
+}
+
+# Função para verificar uso de memória
+check_memory() {
+    local mem_used=$(free | awk '/Mem:/ {printf "%.0f", $3/$2 * 100}')
+    if [ "$mem_used" -gt 90 ]; then
+        log_message "⚠️ Uso de memória alto: ${mem_used}%"
+        return 1
+    fi
+    return 0
 }
 
 # Função para limpar porta e processos
@@ -99,8 +112,23 @@ while true; do
     sleep $CHECK_INTERVAL
     local_check_count=$((local_check_count + 1))
     
+    # Verificar memória a cada 10 checks
+    if [ $((local_check_count % 10)) -eq 0 ]; then
+        if ! check_memory; then
+            log_message "🧹 Limpando memória..."
+        fi
+    fi
+    
     if ! check_server; then
-        log_message "⚠️  [Check #$local_check_count] Servidor não está respondendo!"
+        FAILURE_COUNT=$((FAILURE_COUNT + 1))
+        log_message "⚠️  [Check #$local_check_count] Servidor não está respondendo! (Falha $FAILURE_COUNT/$MAX_FAILURES)"
+        
+        # Se muitas falhas, parar (evitar loop infinito)
+        if [ $FAILURE_COUNT -ge $MAX_FAILURES ]; then
+            log_message "❌ Muitas falhas consecutivas ($FAILURE_COUNT). Parando monitoramento."
+            log_message "💡 Execute novamente ou verifique os logs em $LOG_FILE"
+            exit 1
+        fi
         
         # Fazer verificações adicionais
         if ! pgrep -f "npm run dev" > /dev/null && ! pgrep -f "bun run dev" > /dev/null; then

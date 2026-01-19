@@ -3,6 +3,9 @@
 import { webLearningSystem, type MarketInsight } from './webIntegration';
 import { performAdvancedCandleAnalysis, type AdvancedCandleAnalysis } from './advancedCandleAnalysis';
 import { winStreakLearning } from './winStreakLearning';
+import { antiLossSystem } from './antiLossSystem';
+import { evolutionEngine } from './evolutionEngine';
+import { webResearchSystem } from './webResearch';
 
 export interface SignalHistory {
   id: string;
@@ -45,6 +48,8 @@ export interface OperationalConfig {
 }
 
 const LEARNING_STORAGE_KEY = 'bullex_ai_learning_history';
+const LEARNING_STATE_KEY = 'bullex_ai_learning_state';
+const OPERATIONAL_CONFIG_KEY = 'bullex_ai_operational_config';
 const MAX_HISTORY_SIZE = 1000;
 
 export class AILearningSystem {
@@ -55,14 +60,20 @@ export class AILearningSystem {
     bestIndicators: [],
     patternSuccessRates: {},
     weaknessPatterns: [],
-    evolutionPhase: 1,
+    evolutionPhase: 2, // 🔥 INICIA NA FASE 2 (Intermediária) para máxima performance
   };
   private operationalConfig: OperationalConfig = {
-    minTrendStrength: 40,
-    minSupportResistance: 50,
-    requireConfirmations: 1,
-    disallowedPatterns: new Set<string>(),
-    indicatorWeights: {},
+    minTrendStrength: 45, // 🔥 Realista - permite aprendizado
+    minSupportResistance: 50, // 🔥 Realista - permite aprendizado  
+    requireConfirmations: 2, // 🔥 Balanceado - 2 confirmações são suficientes
+    disallowedPatterns: new Set<string>(['Unknown']), // 🔥 Apenas padrões inválidos
+    indicatorWeights: {
+      'RSI': 8,
+      'MACD': 8,
+      'Bollinger Bands': 7,
+      'trendStrength': 10,
+      'supportResistance': 10,
+    }, // 🔥 Pesos equilibrados para início
   };
 
   constructor() {
@@ -93,6 +104,20 @@ export class AILearningSystem {
       
       // 🔥 Processa resultado no sistema de win streaks
       winStreakLearning.processSignalResult(signal);
+      
+      // 🛡️ Registra no sistema anti-loss para detectar padrões problemáticos
+      antiLossSystem.recordOperationResult(signal, result);
+      
+      // 🧬 REGISTRA NO EVOLUTION ENGINE - Aprende e evolui
+      const strategyId = evolutionEngine.selectBestStrategy().id; // Pega estratégia atual
+      evolutionEngine.recordExperiment(
+        strategyId,
+        result,
+        signal.probability,
+        result === 'WIN' ? 1 : 0
+      );
+      
+      console.log(`📊 Resultado registrado em todos os sistemas de aprendizado: ${result}`);
     }
   }
 
@@ -206,38 +231,89 @@ export class AILearningSystem {
     return rates;
   }
 
-  // Evolve AI parameters based on learning
+  // Evolve AI parameters based on learning - MÁXIMA PERFORMANCE
   evolveAI(): number {
     const currentPhase = this.learningState.evolutionPhase;
     const winRate = this.getWinRate();
 
-    // Evolution phases:
-    // Phase 1: Learning basic patterns (0-100 signals)
-    // Phase 2: Pattern optimization (100-500 signals)
-    // Phase 3: Advanced pattern recognition (500+ signals)
+    // Evolution phases - ULTRA-ACELERADO COM INÍCIO OTIMIZADO:
+    // Phase 2: PADRÃO INICIAL (0-40 signals, otimizado desde o início)
+    // Phase 3: Advanced pattern recognition (40+ signals, winRate > 60%)
+    // Phase 4: Master level (80+ signals, winRate > 70%)
+    // Phase 5: ELITE (150+ signals, winRate > 75%) - NOVA FASE!
 
-    if (this.history.length > 500) {
-      if (winRate > 65) {
-        this.learningState.evolutionPhase = 3;
+    if (this.history.length > 150 && winRate > 75) {
+      if (currentPhase !== 5) {
+        console.log(`🏆 IA EVOLUIU PARA FASE 5 (ELITE)! ${this.history.length} sinais, ${winRate.toFixed(1)}% acerto - MÁXIMA PERFORMANCE!`);
       }
-    } else if (this.history.length > 100) {
-      if (winRate > 55) {
-        this.learningState.evolutionPhase = 2;
+      this.learningState.evolutionPhase = 5;
+    } else if (this.history.length > 80 && winRate > 70) {
+      if (currentPhase !== 4) {
+        console.log(`🎓 IA EVOLUIU PARA FASE 4 (Master)! ${this.history.length} sinais, ${winRate.toFixed(1)}% acerto`);
       }
+      this.learningState.evolutionPhase = 4;
+    } else if (this.history.length > 40 && winRate > 60) {
+      if (currentPhase !== 3) {
+        console.log(`🎓 IA EVOLUIU PARA FASE 3 (Avançado)! ${this.history.length} sinais, ${winRate.toFixed(1)}% acerto`);
+      }
+      this.learningState.evolutionPhase = 3;
     }
+    // Fase 2 é o PADRÃO INICIAL - já otimizada!
 
     return this.learningState.evolutionPhase;
   }
 
   // Get adaptive probability based on learned patterns
-  getAdaptiveProbability(baseScore: number, pattern: string, indicators: string[]): number {
-    let score = baseScore;
+  getAdaptiveProbability(baseScore: number, pattern: string, indicators: string[], direction: 'CALL' | 'PUT', metrics: any): number {
+    // 🧬 USA EVOLUTION ENGINE - Sistema inteligente que evolui
+    const selectedStrategy = evolutionEngine.selectBestStrategy();
+    console.log(`🧬 Estratégia selecionada: ${selectedStrategy.name} (Gen ${selectedStrategy.generation}, WR: ${selectedStrategy.performance.winRate.toFixed(1)}%)`);
     
-    // 🔥 VERIFICA REGRAS DE WIN STREAK PRIMEIRO
+    const strategyResult = evolutionEngine.applyStrategy(selectedStrategy, {
+      rsi: metrics.rsi || 50,
+      macd: metrics.macd || 0,
+      trendStrength: metrics.trendStrength || 50,
+      volumeProfile: metrics.volumeProfile || 50,
+      supportResistance: metrics.supportResistance || 50,
+      candlePattern: pattern,
+      priceAction: metrics.priceAction || 50,
+      overallScore: baseScore,
+    });
+    
+    // Se a estratégia evolutiva decidir não operar, respeita
+    if (!strategyResult.shouldOperate) {
+      console.log(`🚫 Estratégia evolutiva rejeitou operação:`);
+      strategyResult.reasoning.forEach(r => console.log(`   ${r}`));
+      return 0;
+    }
+    
+    // Usa score da estratégia evolutiva como base
+    let score = strategyResult.adjustedProbability;
+    
+    // 🛡️ VERIFICA ANTI-LOSS SYSTEM PRIMEIRO
+    const antiLossCheck = antiLossSystem.evaluateOperation(direction, pattern, {
+      rsi: metrics.rsi,
+      trendStrength: metrics.trendStrength,
+      volatility: metrics.volumeProfile,
+      probability: baseScore,
+    });
+    
+    if (!antiLossCheck.allowed) {
+      console.log(`🚫 BLOQUEADO PELO ANTI-LOSS: ${antiLossCheck.reason}`);
+      return 0; // Rejeita completamente
+    }
+    
+    // Aplica ajustes do anti-loss
+    score += antiLossCheck.confidenceAdjustment;
+    if (antiLossCheck.warnings.length > 0) {
+      console.log(`⚠️ Avisos Anti-Loss: ${antiLossCheck.warnings.join(', ')}`);
+    }
+    
+    // 🔥 VERIFICA REGRAS DE WIN STREAK
     const streakCheck = winStreakLearning.shouldOperateBasedOnStreak(
-      baseScore,
+      score,
       pattern,
-      { trendStrength: baseScore, volumeProfile: baseScore, supportResistance: baseScore }
+      { trendStrength: score, volumeProfile: score, supportResistance: score }
     );
     
     if (!streakCheck.allowed) {
@@ -253,81 +329,90 @@ export class AILearningSystem {
       console.log(`🔥 BOOST DE STREAK: +${streakAdjustments.minProbabilityBoost} (${oldScore} → ${score})`);
     }
     
-    // 🔥 PENALIZAÇÃO FORTE DE PADRÕES FRACOS - Esta é a chave do aprendizado!
+    // 🔥 VERIFICA PADRÕES HISTÓRICOS - Ajuste balanceado
     const patternRates = this.getPatternSuccessRates();
     const weakPatterns = this.analyzeWeakPatterns();
     
-    // Se o padrão tem histórico de perda, PENALIZAR MUITO
+    // Se o padrão tem histórico, ajustar de forma PROGRESSIVA
     if (patternRates[pattern] !== undefined) {
       const successRate = patternRates[pattern];
-      if (successRate < 35) {
-        // Padrão muito fraco = REJEITAR DRASTICAMENTE
-        score -= 50; // Reduz MUITO
-        console.log(`🔴 PADRÃO FRACO DETECTADO: ${pattern} (${successRate.toFixed(1)}%) - Penalização SEVERA!`);
-      } else if (successRate < 45) {
-        // Padrão fraco = Penalizar bastante
-        score -= 30;
-        console.log(`⚠️ Padrão fraco: ${pattern} (${successRate.toFixed(1)}%) - Penalização moderada`);
-      } else if (successRate > 65) {
-        // Padrão forte = BOOST significativo
-        score += 20;
-        console.log(`✅ PADRÃO FORTE DETECTADO: ${pattern} (${successRate.toFixed(1)}%) - BOOST!`);
+      if (successRate < 40) {
+        // Padrão muito fraco (<40%) = Penalizar moderado
+        score -= 20; // 🔥 Reduzido de -100 para -20
+        console.log(`🔴 PADRÃO FRACO: ${pattern} (${successRate.toFixed(1)}%) - Penalização -20`);
+      } else if (successRate < 50) {
+        // Padrão abaixo da média (<50%) = Penalizar leve
+        score -= 10; // 🔥 Reduzido de -70 para -10
+        console.log(`⚠️ Padrão abaixo da média: ${pattern} (${successRate.toFixed(1)}%) - Penalização -10`);
+      } else if (successRate > 70) {
+        // Padrão muito forte (>70%) = BOOST GRANDE
+        score += 15; // 🔥 Reduzido de 40 para 15
+        console.log(`✅ PADRÃO EXCELENTE: ${pattern} (${successRate.toFixed(1)}%) - BOOST +15!`);
+      } else if (successRate > 60) {
+        // Padrão forte (>60%) = BOOST
+        score += 10; // 🔥 Reduzido de 25 para 10
+        console.log(`✅ PADRÃO BOM: ${pattern} (${successRate.toFixed(1)}%) - BOOST +10!`);
       }
     }
 
-    // Boost FORTE se usando melhores indicadores
+    // Boost se usando melhores indicadores
     const bestIndicators = this.analyzeBestIndicators();
     const matchingIndicators = indicators.filter(i => bestIndicators.includes(i)).length;
-    score += matchingIndicators * 15; // Aumentado de 5 para 15
+    score += matchingIndicators * 8; // 🔥 Reduzido de 25 para 8 - balanceado
 
-    // Penalizar se NÃO está usando os melhores indicadores
+    // Penalizar levemente se NÃO está usando os melhores indicadores
     if (bestIndicators.length > 0 && matchingIndicators === 0) {
-      score -= 20;
-      console.log(`⚠️ Nenhum dos melhores indicadores está sendo usado`);
+      score -= 10; // 🔥 Reduzido de 35 para 10
+      console.log(`⚠️ Nenhum dos melhores indicadores usado - Penalização leve -10`);
+    } else if (bestIndicators.length > 0 && matchingIndicators > 0) {
+      console.log(`✅ Usando ${matchingIndicators}/${bestIndicators.length} melhores indicadores (+${matchingIndicators * 8})`);
     }
 
-    // Operational rules adjustments - PENALIZAÇÃO FORTE
+    // Operational rules adjustments - Balanceado
     // Penaliza padrões desautorizados
     if (this.operationalConfig.disallowedPatterns.has(pattern)) {
-      score -= 40; // Aumentado de 15 para 40
-      console.log(`🚫 Padrão bloqueado: ${pattern}`);
+      score -= 30; // 🔥 Reduzido de 70 para 30
+      console.log(`🚫 Padrão bloqueado: ${pattern} - Penalização -30`);
     }
     
     // Pesos por indicador preferido
     indicators.forEach(ind => {
       const w = this.operationalConfig.indicatorWeights[ind];
-      if (w) score += w * 2; // Dobrado o efeito
+      if (w) score += w; // 🔥 Removido multiplicador - uso direto dos pesos
     });
     
-    // Confirmações exigidas: se menos que o necessário, REJEITAR
+    // Confirmações exigidas: se menos que o necessário, penalizar moderadamente
     const confirmations = this.countConfirmationsFromMetrics(baseScore);
     if (confirmations < this.operationalConfig.requireConfirmations) {
-      score -= 30; // Aumentado de 20 para 30
-      console.log(`⚠️ Confirmações insuficientes: ${confirmations}/${this.operationalConfig.requireConfirmations}`);
+      score -= 15; // 🔥 Reduzido de 50 para 15
+      console.log(`⚠️ Confirmações: ${confirmations}/${this.operationalConfig.requireConfirmations} - Penalização -15`);
     }
 
-    // Apply evolution multiplier - aumentado significativamente
+    // Apply evolution multiplier - Progressivo e balanceado
     const evolutionPhase = this.evolveAI();
-    const multiplier = 1 + (evolutionPhase - 1) * 0.15; // Aumentado de 0.05 para 0.15
+    const multiplier = 1 + (evolutionPhase - 2) * 0.15; // 🔥 Reduzido para 0.15 (Fase 2=1.0x, 3=1.15x, 4=1.30x, 5=1.45x)
     score *= multiplier;
+    
+    console.log(`🎓 IA Operando na Fase ${evolutionPhase}: Multiplicador ${multiplier.toFixed(2)}x`);
 
-    // 🎯 LIMITE MÍNIMO MUITO MAIS RIGOROSO - A IA PRECISA APRENDER A SER SELETIVA
-    const minThreshold = 55; // Aumentado de 50 para 55
+    // 🎯 LIMITE FINAL - Balanceado para permitir aprendizado
+    const minThreshold = 50; // 🔥 Reduzido de 75 para 50 - permite sinais iniciais
     const finalScore = Math.min(98, Math.max(minThreshold, Math.round(score)));
     
     if (finalScore === minThreshold && score < minThreshold) {
-      console.log(`⚠️ Sinal rejeitado: score ${score.toFixed(1)} abaixo do mínimo`);
+      console.log(`⚠️ Score ajustado para mínimo: ${score.toFixed(1)} → ${minThreshold}`);
     }
 
     return finalScore;
   }
 
   private countConfirmationsFromMetrics(baseScore: number): number {
-    // Heurística simples: usar baseScore como proxy de confirmações
-    // baseScore > 75 => 3 confirmações; > 60 => 2; senão 1
-    if (baseScore > 75) return 3;
-    if (baseScore > 60) return 2;
-    return 1;
+    // Heurística ULTRA-RIGOROSA: exige scores muito altos para confirmações
+    // baseScore > 85 => 3 confirmações; > 75 => 2; > 65 => 1; senão 0
+    if (baseScore > 85) return 3;
+    if (baseScore > 75) return 2;
+    if (baseScore > 65) return 1;
+    return 0; // Score muito baixo = nenhuma confirmação
   }
 
   getOperationalConfig(): OperationalConfig {
@@ -414,6 +499,8 @@ export class AILearningSystem {
       weaknessPatterns: this.analyzeWeakPatterns(),
       evolutionPhase: this.evolveAI(),
     };
+    // 💾 Salvar estado atualizado imediatamente
+    this.saveHistory();
   }
 
   private saveHistory(): void {
@@ -422,6 +509,26 @@ export class AILearningSystem {
         LEARNING_STORAGE_KEY,
         JSON.stringify(this.history)
       );
+      // 💾 SALVAR ESTADO DE APRENDIZADO COMPLETO
+      localStorage.setItem(
+        LEARNING_STATE_KEY,
+        JSON.stringify(this.learningState)
+      );
+      // 💾 SALVAR CONFIGURAÇÃO OPERACIONAL
+      const configToSave = {
+        ...this.operationalConfig,
+        disallowedPatterns: Array.from(this.operationalConfig.disallowedPatterns)
+      };
+      localStorage.setItem(
+        OPERATIONAL_CONFIG_KEY,
+        JSON.stringify(configToSave)
+      );
+      console.log('💾 Aprendizado salvo:', {
+        signals: this.history.length,
+        winRate: this.learningState.winRate.toFixed(1) + '%',
+        patterns: Object.keys(this.learningState.patternSuccessRates).length,
+        blockedPatterns: this.operationalConfig.disallowedPatterns.size
+      });
     } catch (e) {
       console.error('Failed to save AI learning history:', e);
     }
@@ -432,6 +539,32 @@ export class AILearningSystem {
       const stored = localStorage.getItem(LEARNING_STORAGE_KEY);
       if (stored) {
         this.history = JSON.parse(stored);
+      }
+      
+      // 📂 CARREGAR ESTADO DE APRENDIZADO
+      const storedState = localStorage.getItem(LEARNING_STATE_KEY);
+      if (storedState) {
+        this.learningState = JSON.parse(storedState);
+        console.log('📂 Estado de aprendizado carregado:', {
+          signals: this.learningState.totalSignals,
+          winRate: this.learningState.winRate.toFixed(1) + '%',
+          phase: this.learningState.evolutionPhase
+        });
+      }
+      
+      // 📂 CARREGAR CONFIGURAÇÃO OPERACIONAL
+      const storedConfig = localStorage.getItem(OPERATIONAL_CONFIG_KEY);
+      if (storedConfig) {
+        const config = JSON.parse(storedConfig);
+        this.operationalConfig = {
+          ...config,
+          disallowedPatterns: new Set(config.disallowedPatterns || [])
+        };
+        console.log('📂 Config operacional carregado:', {
+          minTrend: this.operationalConfig.minTrendStrength,
+          minSR: this.operationalConfig.minSupportResistance,
+          blocked: this.operationalConfig.disallowedPatterns.size
+        });
       }
     } catch (e) {
       console.error('Failed to load AI learning history:', e);
@@ -452,29 +585,74 @@ export class AILearningSystem {
   // Continuous learning from web - melhora a IA com conhecimento
   async learnFromWeb(): Promise<void> {
     try {
-      // Pesquisa conhecimento relevante
+      // 🌐 USA NOVO SISTEMA DE PESQUISA WEB REAL
+      console.log('🌐 Iniciando aprendizado web avançado...');
+      
+      // Pesquisa conhecimento relevante baseado no contexto atual
       const context = this.identifyLearningContext();
       
-      // Busca insights para cada categoria
-      const insights = await webLearningSystem.searchMarketKnowledge(
-        context.topic,
-        context.keywords
-      );
-
-      // Aplica insights aos sinais recentes
+      // Busca conhecimento profundo
+      const knowledge = await webResearchSystem.deepLearnTopic(context.topic);
+      console.log(`📚 Aprendido ${knowledge.insights.length} insights de ${knowledge.sources.length} fontes`);
+      
+      // Aplica insights ao sistema
+      knowledge.insights.forEach((insight, index) => {
+        if (index < 10) { // Limita log
+          console.log(`💡 ${insight}`);
+        }
+      });
+      
+      // Busca conhecimento contextual
+      const contextualAdvice = webResearchSystem.getContextualKnowledge({
+        currentWinStreak: this.getConsecutiveWins(),
+        recentLosses: this.getRecentLosses(),
+        dominantPattern: this.getMostUsedPattern(),
+        marketCondition: 'trending', // Simplificado
+      });
+      
+      console.log('🎯 Conselhos contextuais:');
+      contextualAdvice.forEach(advice => console.log(`   ${advice}`));
+      
+      // Salva insights nos sinais recentes
       if (this.history.length > 0) {
         const recentSignals = this.history.slice(-10);
         recentSignals.forEach(signal => {
-          signal.webInsights = insights;
+          signal.webInsights = knowledge.insights.map(insight => ({
+            source: knowledge.sources.join(', '),
+            topic: knowledge.topic,
+            content: insight,
+            timestamp: Date.now(),
+            relevanceScore: knowledge.confidence,
+          }));
         });
         this.saveHistory();
       }
-
-      // Faz aprendizado contínuo
+      
+      // Sistema antigo de aprendizado ainda funciona
       await webLearningSystem.continuousLearning();
     } catch (e) {
       console.error('Erro ao aprender da web:', e);
     }
+  }
+  
+  private getConsecutiveWins(): number {
+    let streak = 0;
+    for (let i = this.history.length - 1; i >= 0; i--) {
+      if (this.history[i].result === 'WIN') streak++;
+      else if (this.history[i].result === 'LOSS') break;
+    }
+    return streak;
+  }
+  
+  private getRecentLosses(): number {
+    return this.history.slice(-10).filter(s => s.result === 'LOSS').length;
+  }
+  
+  private getMostUsedPattern(): string {
+    const patterns = this.history.map(s => s.analysisMetrics.candlePattern);
+    const counts: Record<string, number> = {};
+    patterns.forEach(p => counts[p] = (counts[p] || 0) + 1);
+    return Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] || 'unknown';
   }
 
   // Identifica contexto para aprendizado

@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reset Automático do Sistema IA - Bullex Signals</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            animation: slideIn 0.5s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        h1 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 28px;
+            text-align: center;
+        }
+        
+        .status {
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            font-size: 16px;
+            line-height: 1.6;
+        }
+        
+        .status.info {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            color: #1565c0;
+        }
+        
+        .status.success {
+            background: #e8f5e9;
+            border-left: 4px solid #4caf50;
+            color: #2e7d32;
+        }
+        
+        .status.warning {
+            background: #fff3e0;
+            border-left: 4px solid #ff9800;
+            color: #e65100;
+        }
+        
+        .log {
+            background: #263238;
+            color: #aed581;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            max-height: 300px;
+            overflow-y: auto;
+            margin: 20px 0;
+        }
+        
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px 0;
+            border-bottom: 1px solid #37474f;
+        }
+        
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+        
+        .button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 20px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        
+        .button:active {
+            transform: translateY(0);
+        }
+        
+        .button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .countdown {
+            font-size: 48px;
+            font-weight: bold;
+            text-align: center;
+            color: #667eea;
+            margin: 20px 0;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔄 Reset Automático do Sistema IA</h1>
+        
+        <div id="status" class="status info">
+            <strong>🚀 Iniciando reset automático...</strong><br>
+            Preparando para limpar configurações ruins do sistema de aprendizado.
+        </div>
+        
+        <div class="progress-bar">
+            <div id="progress" class="progress-fill"></div>
+        </div>
+        
+        <div class="log" id="log">
+            <div class="log-entry">💻 Sistema de Reset Automático v1.0</div>
+            <div class="log-entry">📅 Data: <span id="date"></span></div>
+            <div class="log-entry">⏰ Iniciando em 3 segundos...</div>
+        </div>
+        
+        <div id="countdown" class="countdown"></div>
+        
+        <button id="btnReset" class="button" disabled>
+            Resetando automaticamente...
+        </button>
+    </div>
+
+    <script>
+        const log = document.getElementById('log');
+        const status = document.getElementById('status');
+        const progress = document.getElementById('progress');
+        const countdown = document.getElementById('countdown');
+        const btnReset = document.getElementById('btnReset');
+        
+        document.getElementById('date').textContent = new Date().toLocaleString('pt-BR');
+        
+        function addLog(message, type = 'info') {
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.textContent = `[${new Date().toLocaleTimeString('pt-BR')}] ${message}`;
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+        }
+        
+        function updateStatus(message, type = 'info') {
+            status.className = `status ${type}`;
+            status.innerHTML = message;
+        }
+        
+        function updateProgress(percent) {
+            progress.style.width = percent + '%';
+        }
+        
+        async function performReset() {
+            try {
+                addLog('📦 Fase 1: Criando backup dos dados atuais...');
+                updateProgress(20);
+                
+                const backup = {
+                    learning: localStorage.getItem('bullex_ai_learning_history'),
+                    state: localStorage.getItem('bullex_ai_learning_state'),
+                    config: localStorage.getItem('bullex_ai_operational_config'),
+                    signals: localStorage.getItem('bullex_signals'),
+                    timestamp: new Date().toISOString()
+                };
+                
+                const hasData = backup.learning || backup.state || backup.config;
+                
+                if (hasData) {
+                    addLog('✅ Backup criado com sucesso!');
+                    addLog(`📊 Dados encontrados: ${Object.keys(backup).filter(k => backup[k]).length} items`);
+                } else {
+                    addLog('⚠️ Nenhum dado antigo encontrado (primeira execução?)');
+                }
+                
+                await sleep(500);
+                updateProgress(40);
+                
+                addLog('🗑️ Fase 2: Removendo configurações ruins...');
+                await sleep(300);
+                
+                localStorage.removeItem('bullex_ai_learning_history');
+                addLog('  ✓ Histórico de aprendizado removido');
+                await sleep(300);
+                updateProgress(60);
+                
+                localStorage.removeItem('bullex_ai_learning_state');
+                addLog('  ✓ Estado de aprendizado removido');
+                await sleep(300);
+                updateProgress(80);
+                
+                localStorage.removeItem('bullex_ai_operational_config');
+                addLog('  ✓ Configurações operacionais removidas');
+                await sleep(300);
+                updateProgress(90);
+                
+                addLog('📊 Sinais históricos mantidos para análise');
+                addLog('✨ Fase 3: Aplicando novas configurações otimizadas...');
+                await sleep(500);
+                updateProgress(100);
+                
+                addLog('');
+                addLog('🎉 RESET CONCLUÍDO COM SUCESSO!');
+                addLog('');
+                addLog('✅ Novas configurações aplicadas:');
+                addLog('  • Thresholds: 50-65% (progressivo)');
+                addLog('  • Penalizações: Balanceadas (-5 a -25)');
+                addLog('  • Requisitos: Realistas (Trend 45, S/R 50)');
+                addLog('  • Confirmações: 2 (alcançável)');
+                addLog('');
+                addLog('🔄 Redirecionando para aplicação em 3 segundos...');
+                
+                updateStatus(
+                    '<strong>✅ Reset Concluído!</strong><br>' +
+                    'Configurações ruins removidas. Sistema pronto para aprender de verdade!<br>' +
+                    '<em>Redirecionando...</em>',
+                    'success'
+                );
+                
+                btnReset.textContent = 'Redirecionando...';
+                
+                // Countdown visual
+                let count = 3;
+                countdown.textContent = count;
+                const countInterval = setInterval(() => {
+                    count--;
+                    if (count > 0) {
+                        countdown.textContent = count;
+                    } else {
+                        countdown.textContent = '🚀';
+                        clearInterval(countInterval);
+                    }
+                }, 1000);
+                
+                await sleep(3000);
+                
+                // Redirecionar para a aplicação principal
+                const appUrl = window.location.origin + '/bullex-signal-ai';
+                addLog(`🚀 Abrindo aplicação: ${appUrl}`);
+                window.location.href = appUrl;
+                
+            } catch (error) {
+                console.error('Erro durante reset:', error);
+                addLog('❌ ERRO: ' + error.message);
+                updateStatus(
+                    '<strong>❌ Erro durante reset!</strong><br>' +
+                    error.message + '<br>' +
+                    '<em>Tente novamente ou faça reset manual pelo console.</em>',
+                    'warning'
+                );
+                btnReset.textContent = 'Tentar Novamente';
+                btnReset.disabled = false;
+                btnReset.onclick = () => location.reload();
+            }
+        }
+        
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+        
+        // Iniciar reset automático após 3 segundos
+        let autoStartCount = 3;
+        updateStatus(
+            `<strong>⏳ Iniciando automaticamente em ${autoStartCount} segundos...</strong><br>` +
+            'O sistema removerá apenas as configurações ruins, mantendo histórico de sinais.',
+            'info'
+        );
+        
+        const autoStartInterval = setInterval(() => {
+            autoStartCount--;
+            if (autoStartCount > 0) {
+                updateStatus(
+                    `<strong>⏳ Iniciando automaticamente em ${autoStartCount} segundos...</strong><br>` +
+                    'O sistema removerá apenas as configurações ruins, mantendo histórico de sinais.',
+                    'info'
+                );
+            } else {
+                clearInterval(autoStartInterval);
+                updateStatus(
+                    '<strong>🔄 Executando reset...</strong><br>Aguarde enquanto limpamos as configurações ruins.',
+                    'info'
+                );
+                performReset();
+            }
+        }, 1000);
+        
+        // Permitir reset manual também
+        btnReset.onclick = () => {
+            clearInterval(autoStartInterval);
+            performReset();
+        };
+    </script>
+</body>
+</html>

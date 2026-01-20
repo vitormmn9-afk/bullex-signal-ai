@@ -222,16 +222,16 @@ export function performComprehensiveAnalysis(prices: number[], ohlc?: { open: nu
     ? analyzeCandlePattern(ohlc.open, ohlc.high, ohlc.low, ohlc.close)
     : { type: 'neutral' as const, name: 'Unknown', strength: 0.5, confidence: 0.5 };
   
-  // Calculate overall score (0-100)
+  // Calculate overall score (0-100) - RIGOROSO E EQUILIBRADO
   const overallScore = (
-    (rsi > 70 || rsi < 30 ? 20 : 0) + // Overbought/oversold
-    (Math.abs(macd) > 0.5 ? 15 : 0) + // Strong momentum
-    (bbands > 80 || bbands < 20 ? 15 : 0) + // Edge of bands
-    (priceAction > 75 || priceAction < 25 ? 15 : 0) + // Strong trend
-    (candlePattern.strength > 0.7 ? 10 : 0) + // Pattern confidence
-    (trendStrength > 60 ? 10 : 0) + // Trend alignment
-    (Math.abs(quadrant - 50) > 30 ? 5 : 0) + // Support/Resistance proximity
-    (volumeProfile > 60 ? 5 : 0) // Volume confirmation
+    (rsi > 70 || rsi < 30 ? 20 : rsi > 60 || rsi < 40 ? 12 : rsi > 55 || rsi < 45 ? 6 : 0) + // RSI rigoroso
+    (Math.abs(macd) > 0.5 ? 20 : Math.abs(macd) > 0.3 ? 12 : Math.abs(macd) > 0.15 ? 6 : 0) + // MACD rigoroso
+    (bbands > 80 || bbands < 20 ? 18 : bbands > 70 || bbands < 30 ? 10 : bbands > 60 || bbands < 40 ? 5 : 0) + // Bandas rigorosas
+    (priceAction === 100 || priceAction === 0 ? 18 : priceAction > 75 || priceAction < 25 ? 10 : 5) + // Price action clara
+    (candlePattern.strength > 0.8 ? 18 : candlePattern.strength > 0.7 ? 12 : candlePattern.strength > 0.6 ? 6 : 0) + // Padrões fortes
+    (trendStrength > 70 ? 20 : trendStrength > 60 ? 12 : trendStrength > 50 ? 6 : 0) + // Trend forte
+    (Math.abs(quadrant - 50) > 35 ? 12 : Math.abs(quadrant - 50) > 25 ? 8 : Math.abs(quadrant - 50) > 15 ? 4 : 0) + // S/R claros
+    (volumeProfile > 70 ? 12 : volumeProfile > 55 ? 8 : volumeProfile > 45 ? 4 : 0) // Volume significativo
   );
   
   return {

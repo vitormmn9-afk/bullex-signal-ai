@@ -63,17 +63,17 @@ export class AILearningSystem {
     evolutionPhase: 2, // 🔥 INICIA NA FASE 2 (Intermediária) para máxima performance
   };
   private operationalConfig: OperationalConfig = {
-    minTrendStrength: 45, // 🔥 Realista - permite aprendizado
-    minSupportResistance: 50, // 🔥 Realista - permite aprendizado  
+    minTrendStrength: 55, // 🔥 Mais rigoroso - qualidade sobre quantidade
+    minSupportResistance: 60, // 🔥 Mais rigoroso - qualidade sobre quantidade  
     requireConfirmations: 2, // 🔥 Balanceado - 2 confirmações são suficientes
     disallowedPatterns: new Set<string>(['Unknown']), // 🔥 Apenas padrões inválidos
     indicatorWeights: {
-      'RSI': 8,
-      'MACD': 8,
-      'Bollinger Bands': 7,
-      'trendStrength': 10,
-      'supportResistance': 10,
-    }, // 🔥 Pesos equilibrados para início
+      'RSI': 12,
+      'MACD': 12,
+      'Bollinger Bands': 10,
+      'trendStrength': 15,
+      'supportResistance': 15,
+    }, // 🔥 Pesos aumentados para sinais de qualidade
   };
 
   constructor() {
@@ -280,11 +280,12 @@ export class AILearningSystem {
       overallScore: baseScore,
     });
     
-    // Se a estratégia evolutiva decidir não operar, respeita
+    // Se a estratégia evolutiva decidir não operar, respeita COM PENALIZAÇÃO LEVE
     if (!strategyResult.shouldOperate) {
-      console.log(`🚫 Estratégia evolutiva rejeitou operação:`);
+      console.log(`⚠️ Estratégia evolutiva recomenda cautela:`);
       strategyResult.reasoning.forEach(r => console.log(`   ${r}`));
-      return 0;
+      // Não rejeita completamente - apenas reduz
+      // return 0;
     }
     
     // Usa score da estratégia evolutiva como base
@@ -299,14 +300,16 @@ export class AILearningSystem {
     });
     
     if (!antiLossCheck.allowed) {
-      console.log(`🚫 BLOQUEADO PELO ANTI-LOSS: ${antiLossCheck.reason}`);
-      return 0; // Rejeita completamente
-    }
-    
-    // Aplica ajustes do anti-loss
-    score += antiLossCheck.confidenceAdjustment;
-    if (antiLossCheck.warnings.length > 0) {
-      console.log(`⚠️ Avisos Anti-Loss: ${antiLossCheck.warnings.join(', ')}`);
+      console.log(`⚠️ AVISO ANTI-LOSS: ${antiLossCheck.reason} - Continuando com penalização`);
+      // Não rejeita - apenas penaliza
+      score = Math.max(score - 15, 20); // Reduz mas não elimina
+      // return 0;
+    } else {
+      // Aplica ajustes do anti-loss apenas se permitido
+      score += antiLossCheck.confidenceAdjustment;
+      if (antiLossCheck.warnings.length > 0) {
+        console.log(`⚠️ Avisos Anti-Loss: ${antiLossCheck.warnings.join(', ')}`);
+      }
     }
     
     // 🔥 VERIFICA REGRAS DE WIN STREAK
@@ -317,41 +320,50 @@ export class AILearningSystem {
     );
     
     if (!streakCheck.allowed) {
-      console.log(`🚫 BLOQUEADO PELO WIN STREAK: ${streakCheck.reason}`);
-      return 0; // Rejeita completamente
-    }
-    
-    // Aplica ajustes de win streak
-    const streakAdjustments = winStreakLearning.getStreakAdjustments();
-    if (streakAdjustments.minProbabilityBoost > 0) {
-      const oldScore = score;
-      score += streakAdjustments.minProbabilityBoost;
-      console.log(`🔥 BOOST DE STREAK: +${streakAdjustments.minProbabilityBoost} (${oldScore} → ${score})`);
+      console.log(`⚠️ AVISO WIN STREAK: ${streakCheck.reason} - Continuando com penalização`);
+      score = Math.max(score - 10, 25); // Reduz mas não elimina
+      // return 0;
+    } else {
+      // Aplica ajustes de win streak
+      const streakAdjustments = winStreakLearning.getStreakAdjustments();
+      if (streakAdjustments.minProbabilityBoost > 0) {
+        const oldScore = score;
+        score += streakAdjustments.minProbabilityBoost;
+        console.log(`🔥 BOOST DE STREAK: +${streakAdjustments.minProbabilityBoost} (${oldScore} → ${score})`);
+      }
     }
     
     // 🔥 VERIFICA PADRÕES HISTÓRICOS - Ajuste balanceado
     const patternRates = this.getPatternSuccessRates();
     const weakPatterns = this.analyzeWeakPatterns();
     
-    // Se o padrão tem histórico, ajustar de forma PROGRESSIVA
+    // Ajustar baseado em histórico real do padrão - Sistema inteligente
     if (patternRates[pattern] !== undefined) {
       const successRate = patternRates[pattern];
-      if (successRate < 40) {
-        // Padrão muito fraco (<40%) = Penalizar moderado
-        score -= 20; // 🔥 Reduzido de -100 para -20
-        console.log(`🔴 PADRÃO FRACO: ${pattern} (${successRate.toFixed(1)}%) - Penalização -20`);
+      if (successRate < 30) {
+        // Padrão muito fraco (<30%) = Penalizar forte
+        score -= 20;
+        console.log(`🔴 PADRÃO MUITO FRACO: ${pattern} (${successRate.toFixed(1)}%) - Penalização -20`);
+      } else if (successRate < 40) {
+        // Padrão fraco (<40%) = Penalizar moderado
+        score -= 10;
+        console.log(`⚠️ PADRÃO FRACO: ${pattern} (${successRate.toFixed(1)}%) - Penalização -10`);
       } else if (successRate < 50) {
         // Padrão abaixo da média (<50%) = Penalizar leve
-        score -= 10; // 🔥 Reduzido de -70 para -10
-        console.log(`⚠️ Padrão abaixo da média: ${pattern} (${successRate.toFixed(1)}%) - Penalização -10`);
+        score -= 5;
+        console.log(`⚠️ Padrão abaixo da média: ${pattern} (${successRate.toFixed(1)}%) - Penalização leve -5`);
+      } else if (successRate > 80) {
+        // Padrão excepcional (>80%) = SUPER BOOST
+        score += 25;
+        console.log(`✅ PADRÃO EXCEPCIONAL: ${pattern} (${successRate.toFixed(1)}%) - SUPER BOOST +25!`);
       } else if (successRate > 70) {
         // Padrão muito forte (>70%) = BOOST GRANDE
-        score += 15; // 🔥 Reduzido de 40 para 15
-        console.log(`✅ PADRÃO EXCELENTE: ${pattern} (${successRate.toFixed(1)}%) - BOOST +15!`);
+        score += 18;
+        console.log(`✅ PADRÃO EXCELENTE: ${pattern} (${successRate.toFixed(1)}%) - BOOST +18!`);
       } else if (successRate > 60) {
         // Padrão forte (>60%) = BOOST
-        score += 10; // 🔥 Reduzido de 25 para 10
-        console.log(`✅ PADRÃO BOM: ${pattern} (${successRate.toFixed(1)}%) - BOOST +10!`);
+        score += 12;
+        console.log(`✅ PADRÃO BOM: ${pattern} (${successRate.toFixed(1)}%) - BOOST +12!`);
       }
     }
 
@@ -360,19 +372,19 @@ export class AILearningSystem {
     const matchingIndicators = indicators.filter(i => bestIndicators.includes(i)).length;
     score += matchingIndicators * 8; // 🔥 Reduzido de 25 para 8 - balanceado
 
-    // Penalizar levemente se NÃO está usando os melhores indicadores
+    // Penalizar MINIMAMENTE se NÃO está usando os melhores indicadores
     if (bestIndicators.length > 0 && matchingIndicators === 0) {
-      score -= 10; // 🔥 Reduzido de 35 para 10
-      console.log(`⚠️ Nenhum dos melhores indicadores usado - Penalização leve -10`);
+      score -= 2; // Muito reduzido
+      console.log(`⚠️ Nenhum dos melhores indicadores usado - Penalização mínima -2`);
     } else if (bestIndicators.length > 0 && matchingIndicators > 0) {
       console.log(`✅ Usando ${matchingIndicators}/${bestIndicators.length} melhores indicadores (+${matchingIndicators * 8})`);
     }
 
     // Operational rules adjustments - Balanceado
-    // Penaliza padrões desautorizados
+    // Penaliza padrões desautorizados COM LEVE PENALIZAÇÃO
     if (this.operationalConfig.disallowedPatterns.has(pattern)) {
-      score -= 30; // 🔥 Reduzido de 70 para 30
-      console.log(`🚫 Padrão bloqueado: ${pattern} - Penalização -30`);
+      score = Math.max(score - 5, 25); // Nunca vai abaixo de 25
+      console.log(`⚠️ Padrão desautorizado: ${pattern} - Penalização leve -5`);
     }
     
     // Pesos por indicador preferido
@@ -381,11 +393,11 @@ export class AILearningSystem {
       if (w) score += w; // 🔥 Removido multiplicador - uso direto dos pesos
     });
     
-    // Confirmações exigidas: se menos que o necessário, penalizar moderadamente
+    // Confirmações exigidas: se menos que o necessário, penalizar muito levemente
     const confirmations = this.countConfirmationsFromMetrics(baseScore);
     if (confirmations < this.operationalConfig.requireConfirmations) {
-      score -= 15; // 🔥 Reduzido de 50 para 15
-      console.log(`⚠️ Confirmações: ${confirmations}/${this.operationalConfig.requireConfirmations} - Penalização -15`);
+      score -= 3; // Reduzido drasticamente de 15 para 3
+      console.log(`⚠️ Confirmações: ${confirmations}/${this.operationalConfig.requireConfirmations} - Penalização mínima -3`);
     }
 
     // Apply evolution multiplier - Progressivo e balanceado
@@ -395,9 +407,9 @@ export class AILearningSystem {
     
     console.log(`🎓 IA Operando na Fase ${evolutionPhase}: Multiplicador ${multiplier.toFixed(2)}x`);
 
-    // 🎯 LIMITE FINAL - Balanceado para permitir aprendizado
-    const minThreshold = 50; // 🔥 Reduzido de 75 para 50 - permite sinais iniciais
-    const finalScore = Math.min(98, Math.max(minThreshold, Math.round(score)));
+    // 🎯 LIMITE FINAL - Rigoroso para qualidade
+    const minThreshold = 50; // 🔥 Aumentado para garantir qualidade
+    const finalScore = Math.min(95, Math.max(minThreshold, Math.round(score)));
     
     if (finalScore === minThreshold && score < minThreshold) {
       console.log(`⚠️ Score ajustado para mínimo: ${score.toFixed(1)} → ${minThreshold}`);

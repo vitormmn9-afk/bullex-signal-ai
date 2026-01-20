@@ -63,17 +63,17 @@ export class AILearningSystem {
     evolutionPhase: 2, // 🔥 INICIA NA FASE 2 (Intermediária) para máxima performance
   };
   private operationalConfig: OperationalConfig = {
-    minTrendStrength: 55, // 🔥 Mais rigoroso - qualidade sobre quantidade
-    minSupportResistance: 60, // 🔥 Mais rigoroso - qualidade sobre quantidade  
+    minTrendStrength: 50, // 🔥 Equilibrado - qualidade + velocidade
+    minSupportResistance: 52, // 🔥 Equilibrado - qualidade + velocidade  
     requireConfirmations: 2, // 🔥 Balanceado - 2 confirmações são suficientes
     disallowedPatterns: new Set<string>(['Unknown']), // 🔥 Apenas padrões inválidos
     indicatorWeights: {
-      'RSI': 12,
-      'MACD': 12,
-      'Bollinger Bands': 10,
-      'trendStrength': 15,
-      'supportResistance': 15,
-    }, // 🔥 Pesos aumentados para sinais de qualidade
+      'RSI': 10,
+      'MACD': 10,
+      'Bollinger Bands': 8,
+      'trendStrength': 12,
+      'supportResistance': 12,
+    }, // 🔥 Pesos equilibrados
   };
 
   constructor() {
@@ -337,21 +337,21 @@ export class AILearningSystem {
     const patternRates = this.getPatternSuccessRates();
     const weakPatterns = this.analyzeWeakPatterns();
     
-    // Ajustar baseado em histórico real do padrão - Sistema inteligente
+    // Ajustar baseado em histórico real do padrão - EQUILIBRADO
     if (patternRates[pattern] !== undefined) {
       const successRate = patternRates[pattern];
       if (successRate < 30) {
-        // Padrão muito fraco (<30%) = Penalizar forte
-        score -= 20;
-        console.log(`🔴 PADRÃO MUITO FRACO: ${pattern} (${successRate.toFixed(1)}%) - Penalização -20`);
+        // Padrão muito fraco (<30%) = Penalizar moderado
+        score -= 15;
+        console.log(`🔴 PADRÃO MUITO FRACO: ${pattern} (${successRate.toFixed(1)}%) - Penalização -15`);
       } else if (successRate < 40) {
-        // Padrão fraco (<40%) = Penalizar moderado
-        score -= 10;
-        console.log(`⚠️ PADRÃO FRACO: ${pattern} (${successRate.toFixed(1)}%) - Penalização -10`);
-      } else if (successRate < 50) {
-        // Padrão abaixo da média (<50%) = Penalizar leve
-        score -= 5;
-        console.log(`⚠️ Padrão abaixo da média: ${pattern} (${successRate.toFixed(1)}%) - Penalização leve -5`);
+        // Padrão fraco (<40%) = Penalizar leve
+        score -= 8;
+        console.log(`⚠️ PADRÃO FRACO: ${pattern} (${successRate.toFixed(1)}%) - Penalização -8`);
+      } else if (successRate < 48) {
+        // Padrão abaixo da média (<48%) = Penalizar muito leve
+        score -= 3;
+        console.log(`⚠️ Padrão abaixo da média: ${pattern} (${successRate.toFixed(1)}%) - Penalização leve -3`);
       } else if (successRate > 80) {
         // Padrão excepcional (>80%) = SUPER BOOST
         score += 25;
@@ -407,8 +407,8 @@ export class AILearningSystem {
     
     console.log(`🎓 IA Operando na Fase ${evolutionPhase}: Multiplicador ${multiplier.toFixed(2)}x`);
 
-    // 🎯 LIMITE FINAL - Rigoroso para qualidade
-    const minThreshold = 50; // 🔥 Aumentado para garantir qualidade
+    // 🎯 LIMITE FINAL - Equilibrado
+    const minThreshold = 45; // 🔥 Balanceado para qualidade + velocidade
     const finalScore = Math.min(95, Math.max(minThreshold, Math.round(score)));
     
     if (finalScore === minThreshold && score < minThreshold) {

@@ -659,9 +659,9 @@ export function useSignals(marketType: "OTC" | "OPEN", autoGenerate: boolean = t
       console.log(`\n🎲 Probabilidade após validações: ${adaptiveProbability.toFixed(1)}%`);
       console.log('='.repeat(50));
       
-      // 🚫 THRESHOLD ULTRA-PERMISSIVO - Prioriza aprendizado
+      // 🚫 THRESHOLD EQUILIBRADO - Qualidade + Velocidade
       const currentWinRate = learningState.winRate;
-      const MIN_PROBABILITY_THRESHOLD = currentWinRate < 30 ? 45 : (currentWinRate < 40 ? 50 : (currentWinRate < 50 ? 52 : (currentWinRate < 60 ? 55 : 58))); // 🔥 MAIS RIGOROSO - Só sinais de qualidade
+      const MIN_PROBABILITY_THRESHOLD = currentWinRate < 35 ? 42 : (currentWinRate < 45 ? 45 : (currentWinRate < 55 ? 48 : (currentWinRate < 65 ? 52 : 55))); // 🔥 BALANCEADO
       if (adaptiveProbability < MIN_PROBABILITY_THRESHOLD) {
         console.log(`❌ SINAL REJEITADO: Probabilidade ${adaptiveProbability.toFixed(1)}% abaixo do mínimo ${MIN_PROBABILITY_THRESHOLD}%`);
         console.log(`🚨 WinRate: ${currentWinRate.toFixed(1)}% - Tentando novamente...\n`);
@@ -672,18 +672,18 @@ export function useSignals(marketType: "OTC" | "OPEN", autoGenerate: boolean = t
       const operationalConfig = aiLearningSystem.getOperationalConfig();
       const patternRates = aiLearningSystem.getLearningState().patternSuccessRates;
       
-      // Ajustar baseado em histórico real do padrão
+      // Ajustar baseado em histórico real do padrão - EQUILIBRADO
       if (patternRates[candlePatternName]) {
         const patternSuccessRate = patternRates[candlePatternName];
         if (patternSuccessRate < 30) {
-          adaptiveProbability -= 15;
-          console.log(`🔴 PADRÃO MUITO FRACO: ${candlePatternName} (${patternSuccessRate.toFixed(1)}%) - Penalização -15`);
+          adaptiveProbability -= 12;
+          console.log(`🔴 PADRÃO MUITO FRACO: ${candlePatternName} (${patternSuccessRate.toFixed(1)}%) - Penalização -12`);
         } else if (patternSuccessRate < 40) {
-          adaptiveProbability -= 8;
-          console.log(`⚠️ PADRÃO FRACO: ${candlePatternName} (${patternSuccessRate.toFixed(1)}%) - Penalização -8`);
-        } else if (patternSuccessRate < 50) {
-          adaptiveProbability -= 3;
-          console.log(`⚠️ Padrão abaixo da média: ${candlePatternName} (${patternSuccessRate.toFixed(1)}%) - Penalização leve -3`);
+          adaptiveProbability -= 6;
+          console.log(`⚠️ PADRÃO FRACO: ${candlePatternName} (${patternSuccessRate.toFixed(1)}%) - Penalização -6`);
+        } else if (patternSuccessRate < 48) {
+          adaptiveProbability -= 2;
+          console.log(`⚠️ Padrão abaixo da média: ${candlePatternName} (${patternSuccessRate.toFixed(1)}%) - Penalização leve -2`);
         } else if (patternSuccessRate > 80) {
           adaptiveProbability += 20;
           console.log(`✅ PADRÃO EXCEPCIONAL: ${candlePatternName} (${patternSuccessRate.toFixed(1)}%) - SUPER BOOST +20!`);
